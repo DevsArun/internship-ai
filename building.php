@@ -1,0 +1,560 @@
+<?php
+session_name('ai_studio_session');
+session_start();
+if (!isset($_SESSION['studio_user_id'])) { header('Location: index.php'); exit; }
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Building — AI Studio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1F2A44; font-family: 'Segoe UI', sans-serif; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px; width: 100%; max-width: 720px; }
+.prog-bg   { background: rgba(255,255,255,0.1); border-radius: 999px; height: 8px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 999px; background: #fff; transition: width 0.4s ease; }
+.stat-box  { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; text-align: center; }
+.day-log { height: 320px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; font-family: 'Courier New', monospace; font-size: 12px; }
+.day-log::-webkit-scrollbar { width: 4px; }
+.day-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+.log-ok   { color: #4ade80; }
+.log-wait { color: rgba(255,255,255,0.25); }
+.log-spin { color: #93c5fd; }
+.log-err  { color: #f87171; }
+.log-warn { color: #fbbf24; }
+.btn-retry { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; border-radius: 8px; padding: 9px 18px; font-size: 13px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div style="text-align:center;margin-bottom:32px">
+    <div id="topIcon" style="font-size:48px;margin-bottom:12px">⚡</div>
+    <h1 id="mainTitle" style="font-size:22px;font-weight:800;margin-bottom:6px">Course Generate Ho Raha Hai...</h1>
+    <p id="mainSub" style="color:rgba(255,255,255,0.4);font-size:14px">Page band mat karo — content generate ho raha hai</p>
+  </div>
+  <div style="margin-bottom:24px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="color:rgba(255,255,255,0.5);font-size:13px" id="progLabel">Initializing...</span>
+      <span style="color:#fff;font-size:13px;font-weight:700" id="progPct">0%</span>
+    </div>
+    <div class="prog-bg"><div class="prog-fill" id="progBar" style="width:0%"></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px">
+    <div class="stat-box"><div id="sDone" style="color:#4ade80;font-size:22px;font-weight:800">0</div><div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Done</div></div>
+    <div class="stat-box"><div id="sTotal" style="font-size:22px;font-weight:800">—</div><div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Total Days</div></div>
+    <div class="stat-box"><div id="sBatch" style="color:#93c5fd;font-size:22px;font-weight:800">—</div><div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Batch</div></div>
+    <div class="stat-box"><div id="sETA" style="color:#fbbf24;font-size:22px;font-weight:800">—</div><div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">ETA</div></div>
+  </div>
+  <div class="day-log" id="dayLog"><div class="log-wait">System initializing...</div></div>
+  <div id="errBox" style="display:none;margin-top:16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:14px">
+    <p style="color:#fca5a5;font-size:13px;margin-bottom:10px" id="errMsg"></p>
+    <button class="btn-retry" onclick="retryFailed()">🔄 Retry Failed Days</button>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+var syllabus = [], meta = {}, allContent = {}, failedDays = [];
+var AI_SETTINGS = null;
+
+// ─── PROVIDER CONFIG ──────────────────────────────────────────────────────────
+// Default model lists per provider (fallback if no saved model)
+var PROVIDER_MODELS = {
+  gemini: ['gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash','gemini-2.5-pro','gemini-1.5-pro'],
+  groq:   ['llama-3.3-70b-versatile','llama-3.1-8b-instant','qwen/qwen3-32b','openai/gpt-oss-20b','mixtral-8x7b-32768','gemma2-9b-it'],
+  openai: ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'],
+  grok:   ['grok-3-fast','grok-3','grok-2']
+};
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+function log(msg, type){
+  type = type || 'wait';
+  var el  = document.getElementById('dayLog');
+  var div = document.createElement('div');
+  div.className   = 'log-' + type;
+  div.textContent = msg || '\u00a0';
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(pct, label){
+  document.getElementById('progBar').style.width   = pct + '%';
+  document.getElementById('progPct').textContent   = pct + '%';
+  document.getElementById('progLabel').textContent = label;
+}
+
+// ─── BUILD PROVIDER CHAIN ─────────────────────────────────────────────────────
+// Returns array of {provider, keys[], models[]} in priority order
+// Primary provider first, then others as fallback
+function buildProviderChain(settings){
+  var primary = settings.active_ai_provider || 'gemini';
+
+  // All 4 providers in order: primary first
+  var order = [primary];
+  ['gemini','groq','openai','grok'].forEach(function(p){
+    if(p !== primary) order.push(p);
+  });
+
+  var chain = [];
+  order.forEach(function(p){
+    var keys = [
+      (settings[p+'_api_key']   || '').trim(),
+      (settings[p+'_api_key_2'] || '').trim(),
+      (settings[p+'_api_key_3'] || '').trim()
+    ].filter(function(k){ return k.length > 0; });
+
+    if(keys.length === 0) return; // skip if no keys configured
+
+    var savedModel = (settings[p+'_model'] || '').trim();
+    var models = [];
+    if(savedModel) models.push(savedModel);
+    // Add default models as fallback (skip duplicates)
+    (PROVIDER_MODELS[p] || []).forEach(function(m){
+      if(models.indexOf(m) === -1) models.push(m);
+    });
+
+    chain.push({ provider: p, keys: keys, models: models, deadKeys: [] });
+  });
+
+  return chain;
+}
+
+// ─── API CALLERS ──────────────────────────────────────────────────────────────
+function callGemini(apiKey, model, prompt){
+  var ctrl  = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 50000);
+  return fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.5, maxOutputTokens:4096} }),
+      signal: ctrl.signal }
+  ).then(function(res){
+    clearTimeout(timer);
+    if(res.status === 429) return {ok:false, code:429, msg:'RATE_LIMIT'};
+    if(res.status === 503) return {ok:false, code:503, msg:'OVERLOADED'};
+    if(!res.ok)            return {ok:false, code:res.status, msg:'HTTP_'+res.status};
+    return res.json().then(function(j){
+      var text = '';
+      try { text = j.candidates[0].content.parts[0].text; } catch(e){}
+      return text.trim() ? {ok:true, text:text} : {ok:false, code:0, msg:'EMPTY'};
+    });
+  }).catch(function(e){
+    clearTimeout(timer);
+    return {ok:false, code:408, msg: e.name==='AbortError'?'TIMEOUT':e.message};
+  });
+}
+
+function callOpenAIStyle(endpoint, apiKey, model, prompt){
+  var ctrl  = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 50000);
+  return fetch(endpoint, {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+apiKey},
+    body: JSON.stringify({ model:model, messages:[{role:'user',content:prompt}], max_tokens:4096, temperature:0.5 }),
+    signal: ctrl.signal
+  }).then(function(res){
+    clearTimeout(timer);
+    if(res.status === 429) return {ok:false, code:429, msg:'RATE_LIMIT'};
+    if(res.status === 401) return {ok:false, code:401, msg:'INVALID_KEY'};
+    if(res.status === 404) return {ok:false, code:404, msg:'MODEL_NOT_FOUND'};
+    if(res.status === 503) return {ok:false, code:503, msg:'OVERLOADED'};
+    if(!res.ok)            return {ok:false, code:res.status, msg:'HTTP_'+res.status};
+    return res.json().then(function(j){
+      var text = '';
+      try { text = j.choices[0].message.content; } catch(e){}
+      return text.trim() ? {ok:true, text:text} : {ok:false, code:0, msg:'EMPTY'};
+    });
+  }).catch(function(e){
+    clearTimeout(timer);
+    return {ok:false, code:408, msg: e.name==='AbortError'?'TIMEOUT':e.message};
+  });
+}
+
+function callAPI(provider, apiKey, model, prompt){
+  if(provider === 'gemini') return callGemini(apiKey, model, prompt);
+  if(provider === 'groq')   return callOpenAIStyle('https://api.groq.com/openai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'openai') return callOpenAIStyle('https://api.openai.com/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'grok')   return callOpenAIStyle('https://api.x.ai/v1/chat/completions', apiKey, model, prompt);
+  return Promise.resolve({ok:false, code:0, msg:'UNKNOWN_PROVIDER'});
+}
+
+// ─── PROMPT BUILDER ───────────────────────────────────────────────────────────
+function buildPrompt(topic, level, language, dayObj, includeQuiz){
+  var quizInstr = (includeQuiz && dayObj.has_quiz)
+    ? 'Include "quiz" array with exactly 10 MCQ objects: {"question":"...","options":["A","B","C","D"],"correct_index":0,"explanation":"..."}'
+    : '"quiz":[]';
+  return 'You are an expert ' + topic + ' instructor.\n'
+    + 'Generate complete educational content for ONE day of a course.\n'
+    + 'Level: ' + level + ' | Language: ' + language + '\n\n'
+    + 'Day: ' + dayObj.day + '\n'
+    + 'Title: ' + dayObj.title + '\n'
+    + 'Topics: ' + (dayObj.topics || []).join(', ') + '\n\n'
+    + 'Instructions:\n'
+    + '- Write detailed HTML using <h3>,<p>,<ul>,<li>,<code>,<strong>\n'
+    + '- Minimum 500 words of content\n'
+    + '- Cover ALL topics listed above\n'
+    + '- ' + quizInstr + '\n\n'
+    + 'Return ONLY valid JSON, no markdown, no backticks:\n'
+    + '{"day":' + dayObj.day + ',"content":"[HTML HERE]","image_query":"short search query","quiz":[]}';
+}
+
+// ─── JSON PARSER ─────────────────────────────────────────────────────────────
+function parseOneDayJSON(raw){
+  var text = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+  // Try direct parse
+  try { var p = JSON.parse(text); if(p && p.day) return p; } catch(e){}
+  // Try extract from first { to last }
+  var s = text.indexOf('{'), en = text.lastIndexOf('}');
+  if(s !== -1 && en > s){
+    try { var p2 = JSON.parse(text.substring(s, en+1)); if(p2 && p2.day) return p2; } catch(e){}
+  }
+  // Regex fallback
+  try {
+    var dm  = text.match(/"day"\s*:\s*(\d+)/);
+    var iqm = text.match(/"image_query"\s*:\s*"([^"]+)"/);
+    var day = dm ? parseInt(dm[1]) : 0;
+    var iq  = iqm ? iqm[1] : '';
+    var cm  = text.match(/"content"\s*:\s*"([\s\S]+?)(?=",\s*"(?:image_query|quiz|day))/);
+    var content = cm ? cm[1].replace(/\\n/g,'\n').replace(/\\"/g,'"') : '';
+    if(day && content) return {day:day, content:content, image_query:iq, quiz:[]};
+  } catch(e){}
+  return null;
+}
+
+// ─── CORE: GENERATE ONE DAY WITH FULL PROVIDER CHAIN FALLBACK ─────────────────
+// This is the KEY fix — it properly cycles through ALL providers, not just retrying same one
+async function generateOneDay(chain, dayObj, topic, level, language, includeQuiz){
+  var prompt = buildPrompt(topic, level, language, dayObj, includeQuiz);
+
+  // Track per-provider rate limit cooldowns
+  var rateLimitUntil = {}; // provider -> timestamp when usable again
+
+  var MAX_GLOBAL_ATTEMPTS = 20; // max total attempts across all providers
+  var attempt = 0;
+  var quizRetryCount = 0;
+
+  while(attempt < MAX_GLOBAL_ATTEMPTS){
+    attempt++;
+
+    // Find the best available provider right now
+    var selectedProvider = null;
+    var selectedChain    = null;
+
+    for(var ci = 0; ci < chain.length; ci++){
+      var c = chain[ci];
+      var liveKeys = c.keys.filter(function(k){ return c.deadKeys.indexOf(k) === -1; });
+      if(liveKeys.length === 0) continue; // all keys dead for this provider
+
+      var cooldown = rateLimitUntil[c.provider] || 0;
+      if(Date.now() < cooldown) continue; // still in cooldown
+
+      selectedProvider = c;
+      selectedChain    = ci;
+      break;
+    }
+
+    // If no provider available — wait for the earliest cooldown to expire
+    if(!selectedProvider){
+      var earliest = Infinity;
+      chain.forEach(function(c){
+        var liveKeys = c.keys.filter(function(k){ return c.deadKeys.indexOf(k) === -1; });
+        if(liveKeys.length > 0 && rateLimitUntil[c.provider]){
+          earliest = Math.min(earliest, rateLimitUntil[c.provider]);
+        }
+      });
+      if(earliest === Infinity){
+        log('  ❌ All providers exhausted / no valid keys', 'err');
+        return {success: false};
+      }
+      var waitMs = Math.max(0, earliest - Date.now()) + 1000;
+      log('  ⏳ All providers cooling down — wait ' + Math.ceil(waitMs/1000) + 's...', 'warn');
+      await sleep(waitMs);
+      continue;
+    }
+
+    // Pick a live key (round-robin within provider)
+    var liveKeys = selectedProvider.keys.filter(function(k){ return selectedProvider.deadKeys.indexOf(k) === -1; });
+    var keyIdx   = attempt % liveKeys.length;
+    var apiKey   = liveKeys[keyIdx];
+
+    // Pick model (cycle through on errors)
+    var modelIdx = Math.floor((attempt - 1) / liveKeys.length) % selectedProvider.models.length;
+    var model    = selectedProvider.models[modelIdx];
+
+    log('  Day ' + dayObj.day + ' | Try ' + attempt + ': [' + selectedProvider.provider.toUpperCase() + '] ' + model + ' (Key ' + (keyIdx+1) + '/' + liveKeys.length + ')', 'spin');
+
+    var res = await callAPI(selectedProvider.provider, apiKey, model, prompt);
+
+    if(res.ok){
+      var parsed = parseOneDayJSON(res.text);
+      if(!parsed || !parsed.day){
+        log('  Day ' + dayObj.day + ' — JSON parse fail, retry...', 'warn');
+        await sleep(1000);
+        continue;
+      }
+
+      // Validate quiz if needed
+      if(includeQuiz && dayObj.has_quiz){
+        var quiz = parsed.quiz || [];
+        if(!Array.isArray(quiz) || quiz.length < 5){
+          quizRetryCount++;
+          if(quizRetryCount <= 3){
+            log('  ⚠️ Quiz empty/incomplete (' + (quiz ? quiz.length : 0) + 'Q) — retry ' + quizRetryCount + '/3...', 'warn');
+            await sleep(1500);
+            continue;
+          } else {
+            log('  ⚠️ Quiz still failing after 3 tries — accepting without quiz', 'warn');
+            parsed.quiz = [];
+          }
+        } else {
+          log('  📝 Quiz: ' + quiz.length + '/' + quiz.length + ' valid', 'ok');
+        }
+      }
+
+      return {success: true, data: parsed};
+    }
+
+    // ─── Handle errors ───────────────────────────────────────────────────────
+    if(res.code === 401){
+      // Dead key — permanently remove
+      log('  ❌ Key ' + (keyIdx+1) + ' invalid (401) — permanently skip kiya', 'err');
+      selectedProvider.deadKeys.push(apiKey);
+      // Check if all keys dead for this provider
+      var remainingKeys = selectedProvider.keys.filter(function(k){ return selectedProvider.deadKeys.indexOf(k) === -1; });
+      if(remainingKeys.length === 0){
+        log('  🔴 ' + selectedProvider.provider.toUpperCase() + ' — all keys dead, provider skip', 'err');
+      }
+      await sleep(500);
+      continue;
+    }
+
+    if(res.code === 429){
+      // Rate limited — set cooldown for THIS provider and SWITCH to next
+      var cooldownMs = 60000; // 60 second default cooldown
+      rateLimitUntil[selectedProvider.provider] = Date.now() + cooldownMs;
+      log('  ⚠️ ' + selectedProvider.provider.toUpperCase() + ' rate limited — 60s cooldown, switching provider...', 'warn');
+
+      // Try to find another provider immediately
+      var nextAvailable = null;
+      for(var ni = 0; ni < chain.length; ni++){
+        if(ni === selectedChain) continue;
+        var nc = chain[ni];
+        var nliveKeys = nc.keys.filter(function(k){ return nc.deadKeys.indexOf(k) === -1; });
+        if(nliveKeys.length === 0) continue;
+        var ncooldown = rateLimitUntil[nc.provider] || 0;
+        if(Date.now() >= ncooldown){ nextAvailable = nc; break; }
+      }
+
+      if(nextAvailable){
+        log('  🔄 Switched to: ' + nextAvailable.provider.toUpperCase(), 'spin');
+      } else {
+        log('  ⏳ No provider available — waiting...', 'warn');
+      }
+      await sleep(500);
+      continue;
+    }
+
+    if(res.code === 404){
+      // Model not found — try next model within same provider
+      log('  ⚠️ ' + model + ' not found — next model...', 'warn');
+      await sleep(1000);
+      continue;
+    }
+
+    if(res.code === 503 || res.code === 408 || res.code === 500){
+      // Temporary server error — short wait, try next model/provider
+      log('  ⚠️ ' + res.msg + ' — 5s wait, retry...', 'warn');
+      await sleep(5000);
+      continue;
+    }
+
+    // Unknown error
+    log('  ❌ Error ' + res.code + ': ' + res.msg, 'err');
+    await sleep(2000);
+  }
+
+  log('  ❌ Day ' + dayObj.day + ' — max attempts reached', 'err');
+  return {success: false};
+}
+
+// ─── MAIN FLOW ────────────────────────────────────────────────────────────────
+async function loadSettings(){
+  try {
+    var r = await fetch('../api/ai/get-settings.php');
+    var d = await r.json();
+    if(d.success){ AI_SETTINGS = d.settings; return true; }
+  } catch(e){ console.warn('Settings load error:', e); }
+  return false;
+}
+
+async function generateAll(chain, meta){
+  failedDays = [];
+  var doneDays = 0, t0 = Date.now();
+  var BS = parseInt(meta.batch_size) || 7;
+  var totalBatches = Math.ceil(syllabus.length / BS);
+
+  for(var i = 0; i < syllabus.length; i++){
+    var dayObj = syllabus[i];
+
+    if(i % BS === 0){
+      var bNum  = Math.floor(i / BS) + 1;
+      var bEnd  = Math.min(i + BS - 1, syllabus.length - 1);
+      document.getElementById('sBatch').textContent = bNum + '/' + totalBatches;
+      log('── Batch ' + bNum + '/' + totalBatches + ': Day ' + syllabus[i].day + '–' + syllabus[bEnd].day + ' ──', 'spin');
+    }
+
+    var res = await generateOneDay(chain, dayObj, meta.topic, meta.level, meta.language, meta.include_quiz);
+
+    if(res.success){
+      var item = res.data;
+      allContent[item.day] = {
+        day:         item.day,
+        title:       dayObj.title || 'Day ' + item.day,
+        topics:      dayObj.topics || [],
+        has_quiz:    dayObj.has_quiz || false,
+        content:     item.content || '',
+        image_query: item.image_query || (dayObj.image_query || meta.topic),
+        quiz:        item.quiz || []
+      };
+      doneDays++;
+      var qInfo = (item.quiz && item.quiz.length > 0) ? ' [Quiz: ' + item.quiz.length + 'Q]' : '';
+      log('✅ Day ' + item.day + ': ' + (dayObj.title || '') + qInfo, 'ok');
+    } else {
+      log('❌ Day ' + dayObj.day + ' failed — will retry later', 'err');
+      failedDays.push(i);
+    }
+
+    // Update stats
+    var pct = Math.round((doneDays / syllabus.length) * 100);
+    setProgress(pct, 'Day ' + doneDays + '/' + syllabus.length + ' complete');
+    document.getElementById('sDone').textContent  = doneDays;
+
+    if(doneDays > 0){
+      var el  = (Date.now() - t0) / 1000;
+      var rem = ((syllabus.length - doneDays) * el) / doneDays;
+      document.getElementById('sETA').textContent = rem > 60 ? Math.ceil(rem/60) + 'm' : Math.ceil(rem) + 's';
+    }
+
+    // Batch boundary pause (every BS days) — but only between batches, not after last day
+    if((i + 1) % BS === 0 && i < syllabus.length - 1){
+      log('⏸️ Batch complete — 30s wait...', 'wait');
+      await sleep(30000);
+      log('▶️ Next batch shuru...', 'spin');
+    } else {
+      await sleep(600); // small delay between days
+    }
+  }
+
+  if(failedDays.length > 0){
+    document.getElementById('errBox').style.display = 'block';
+    document.getElementById('errMsg').textContent   = failedDays.length + ' day(s) fail hue. Retry karo.';
+  } else {
+    finalize();
+  }
+}
+
+async function retryFailed(){
+  document.getElementById('errBox').style.display = 'none';
+  var toRetry = failedDays.slice();
+  failedDays  = [];
+  var chain   = window._chain;
+  // Reset dead keys and rate limits for retry
+  chain.forEach(function(c){ c.deadKeys = []; });
+
+  log('🔄 Retrying ' + toRetry.length + ' failed day(s)...', 'spin');
+
+  for(var ri = 0; ri < toRetry.length; ri++){
+    var idx    = toRetry[ri];
+    var dayObj = syllabus[idx];
+    log('── Retry: Day ' + dayObj.day + ' ──', 'spin');
+    var res = await generateOneDay(chain, dayObj, meta.topic, meta.level, meta.language, meta.include_quiz);
+    if(res.success){
+      var item = res.data;
+      allContent[item.day] = {
+        day:         item.day,
+        title:       dayObj.title || 'Day ' + item.day,
+        topics:      dayObj.topics || [],
+        has_quiz:    dayObj.has_quiz || false,
+        content:     item.content || '',
+        image_query: item.image_query || meta.topic,
+        quiz:        item.quiz || []
+      };
+      log('✅ Day ' + item.day + ' retry OK', 'ok');
+      document.getElementById('sDone').textContent = parseInt(document.getElementById('sDone').textContent) + 1;
+    } else {
+      failedDays.push(idx);
+      log('❌ Day ' + dayObj.day + ' still failing', 'err');
+    }
+    await sleep(1500);
+  }
+
+  if(failedDays.length > 0){
+    document.getElementById('errBox').style.display = 'block';
+    document.getElementById('errMsg').textContent   = failedDays.length + ' day(s) abhi bhi fail. Dobara retry karo.';
+  } else {
+    finalize();
+  }
+}
+
+function finalize(){
+  setProgress(100, 'Complete!');
+  document.getElementById('sETA').textContent   = 'Done';
+  document.getElementById('sBatch').textContent = 'Done';
+  document.getElementById('topIcon').textContent = '🎉';
+  document.getElementById('mainTitle').textContent = 'Course Ready!';
+  document.getElementById('mainSub').innerHTML = '<span style="color:#4ade80;font-weight:600">Sab content ready! Preview pe ja raha hoon...</span>';
+  log('🎉 All done! Saving...', 'ok');
+  var arr = Object.values(allContent).sort(function(a,b){ return a.day - b.day; });
+  sessionStorage.setItem('ai_course_data', JSON.stringify({ course:arr, total_days:arr.length }));
+  setTimeout(function(){ window.location.href = 'preview.php'; }, 1500);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init(){
+  var rawS = sessionStorage.getItem('ai_syllabus');
+  var rawM = sessionStorage.getItem('ai_meta');
+  if(!rawS || !rawM){ window.location.href = 'generate.php'; return; }
+
+  syllabus = JSON.parse(rawS);
+  meta     = JSON.parse(rawM);
+
+  document.getElementById('sTotal').textContent    = syllabus.length;
+  document.getElementById('mainTitle').textContent = '"' + meta.topic + '" — ' + meta.days + ' Days';
+  log('📋 Syllabus: ' + syllabus.length + ' days | Level: ' + meta.level, 'ok');
+
+  log('⏳ Settings load ho rahi hai...', 'wait');
+  var ok = await loadSettings();
+  if(!ok || !AI_SETTINGS){
+    log('❌ Settings load fail — Settings page pe jao aur save karo', 'err');
+    return;
+  }
+
+  var settingCount = Object.keys(AI_SETTINGS).length;
+  log('✅ Settings loaded (' + settingCount + ' keys)', 'ok');
+
+  // Build provider chain — THIS is what fixes the infinite loop
+  var chain = buildProviderChain(AI_SETTINGS);
+  if(chain.length === 0){
+    log('❌ Koi bhi provider configured nahi! Settings mein API key daalo.', 'err');
+    return;
+  }
+
+  window._chain = chain; // save for retry
+
+  var primary = chain[0];
+  log('🤖 Primary Provider: ' + primary.provider.toUpperCase() + ' (' + primary.keys.length + ' keys)', 'ok');
+  log('🔗 Provider Chain: ' + chain.map(function(c){ return c.provider.toUpperCase()+'('+c.keys.length+'k)'; }).join(' → '), 'ok');
+  log('📝 Quiz: ' + (meta.include_quiz ? '10 questions per quiz day' : 'Disabled') + ' (' + meta.level + ', ' + meta.days + ' days)', 'ok');
+  log('🔗 Models: ' + primary.models.slice(0,3).join(' → ') + '...', 'ok');
+
+  await generateAll(chain, meta);
+}
+
+init();
+</script>
+</body>
+</html>
