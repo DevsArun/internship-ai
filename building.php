@@ -187,10 +187,31 @@ function callAPI(provider, apiKey, model, prompt){
 //   1. CONTENT DAY  -> rich, beginner-friendly, in-depth lesson (NO quiz)
 //   2. QUIZ DAY     -> ONLY a 10-question quiz on the previous 6 days (NO lesson content)
 
-function buildContentPrompt(topic, level, language, dayObj){
+function buildContentPrompt(topic, level, language, dayObj, totalDays){
   var topics = (dayObj.topics || []).join(', ');
+
+  // For a "Beginner to Advanced" journey, the effective level shifts as the
+  // course progresses, so each day's lesson is taught at the right depth.
+  var isJourney = /beginner\s*(to|→|->|-)\s*advanced/i.test(level || '');
+  var effLevel  = level;
+  var phaseNote = '';
+  if(isJourney){
+    var pct = dayObj.day / Math.max(totalDays || dayObj.day, 1);
+    if(pct <= 0.34){
+      effLevel  = 'Beginner';
+      phaseNote = 'This day is in the FOUNDATIONS phase of a zero-to-advanced journey — assume NO prior knowledge, explain the absolute basics super slowly and clearly.';
+    } else if(pct <= 0.67){
+      effLevel  = 'Intermediate';
+      phaseNote = 'This day is in the INTERMEDIATE phase — the learner already knows the basics from earlier days, so go deeper, connect concepts, and use realistic examples.';
+    } else {
+      effLevel  = 'Advanced';
+      phaseNote = 'This day is in the ADVANCED phase — the learner has solid fundamentals now, so teach complex topics, best practices, optimization and real-world application, while still keeping explanations clear.';
+    }
+  }
+
   return 'You are a world-class ' + topic + ' instructor and technical writer, famous for making hard concepts feel simple for ABSOLUTE BEGINNERS.\n'
-    + 'Write a COMPLETE, in-depth lesson for ONE day of a ' + level + '-level "' + topic + '" course.\n'
+    + 'Write a COMPLETE, in-depth lesson for ONE day of a ' + effLevel + '-level "' + topic + '" course.\n'
+    + (phaseNote ? phaseNote + '\n' : '')
     + 'Write EVERYTHING in ' + language + ' (friendly, warm, encouraging tone).\n\n'
     + 'DAY ' + dayObj.day + ' — ' + dayObj.title + '\n'
     + 'Topics to cover fully and clearly: ' + topics + '\n\n'
@@ -263,7 +284,7 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
 
   var prompt = isQuizDay
     ? buildQuizPrompt(topic, level, language, dayObj, weekTopics, weekNum)
-    : buildContentPrompt(topic, level, language, dayObj);
+    : buildContentPrompt(topic, level, language, dayObj, (meta.days || syllabus.length));
 
   // Track per-provider rate limit cooldowns
   var rateLimitUntil = {}; // provider -> timestamp when usable again

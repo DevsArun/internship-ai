@@ -143,6 +143,7 @@ label { color: rgba(255,255,255,0.6); font-size: 13px; display: block; margin-bo
               <option value="Beginner">Beginner</option>
               <option value="Intermediate">Intermediate</option>
               <option value="Advanced">Advanced</option>
+              <option value="Beginner to Advanced">Beginner → Advanced (Full Journey)</option>
             </select>
           </div>
           <div>
@@ -353,6 +354,19 @@ function buildPrompt(topic, totalDays, startDay, endDay, level, language, type, 
         ? 'internship program designer. Create practical daily tasks for a '+totalDays+'-day "'+topic+'" internship.'
         : 'course curriculum designer. Create a '+totalDays+'-day "'+topic+'" course.';
 
+    // ── Difficulty progression ──────────────────────────────────────────
+    // "Beginner to Advanced" = ONE continuous journey: the syllabus must ramp
+    // difficulty across the WHOLE course, not stay at a single level.
+    var isJourney = /beginner\s*(to|→|->|-)\s*advanced/i.test(level);
+    var levelRule = isJourney
+        ? 'DIFFICULTY JOURNEY (very important): This is a single "Zero to Advanced" course of '+totalDays+' days. '
+          + 'Ramp the difficulty smoothly across the full course: roughly the first third = absolute-beginner FOUNDATIONS '
+          + '(core concepts, vocabulary, simple examples); the middle third = INTERMEDIATE (deeper concepts, real use-cases, '
+          + 'combining ideas); the final third = ADVANCED (complex topics, best practices, optimization, real-world projects). '
+          + 'You are generating days '+startDay+'-'+endDay+' of '+totalDays+', so choose topics that match exactly where these days '
+          + 'fall in that beginner→advanced journey, building on everything taught before.'
+        : 'Level: '+level+' — keep every day consistent with this difficulty level.';
+
     // ── Quiz rule (STRICT) ──────────────────────────────────────────────
     // Quiz comes ONLY on every 7th day (7, 14, 21, 28 ...). Those days are
     // pure REVISION + QUIZ days — NO brand-new concept is taught on them.
@@ -365,7 +379,8 @@ function buildPrompt(topic, totalDays, startDay, endDay, level, language, type, 
         : 'Set "has_quiz":false for every single day.';
 
     return 'You are an expert '+role+'\n'
-        + 'Level: '+level+' | Language: '+language+'\n'
+        + levelRule + '\n'
+        + 'Language: '+language+'\n'
         + 'Generate ONLY days '+startDay+' to '+endDay+' (exactly '+n+' days).\n'
         + 'Build a logical learning progression: each fresh day should cover 2-3 focused, clearly-scoped topics that build on earlier days.\n'
         + quizRule + '\n'
