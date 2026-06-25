@@ -190,28 +190,25 @@ function callAPI(provider, apiKey, model, prompt){
 function buildContentPrompt(topic, level, language, dayObj, totalDays){
   var topics = (dayObj.topics || []).join(', ');
 
-  // For a "Beginner to Advanced" journey, the effective level shifts as the
-  // course progresses, so each day's lesson is taught at the right depth.
-  var isJourney = /beginner\s*(to|→|->|-)\s*advanced/i.test(level || '');
-  var effLevel  = level;
-  var phaseNote = '';
-  if(isJourney){
-    var pct = dayObj.day / Math.max(totalDays || dayObj.day, 1);
-    if(pct <= 0.34){
-      effLevel  = 'Beginner';
-      phaseNote = 'This day is in the FOUNDATIONS phase of a zero-to-advanced journey — assume NO prior knowledge, explain the absolute basics super slowly and clearly.';
-    } else if(pct <= 0.67){
-      effLevel  = 'Intermediate';
-      phaseNote = 'This day is in the INTERMEDIATE phase — the learner already knows the basics from earlier days, so go deeper, connect concepts, and use realistic examples.';
-    } else {
-      effLevel  = 'Advanced';
-      phaseNote = 'This day is in the ADVANCED phase — the learner has solid fundamentals now, so teach complex topics, best practices, optimization and real-world application, while still keeping explanations clear.';
-    }
+  // EVERY course is a full beginner→advanced journey now (level is optional).
+  // The effective depth shifts as the course progresses, so each day's lesson
+  // is taught at exactly the right level — and ALWAYS at maximum, next-level depth.
+  var pct = dayObj.day / Math.max(totalDays || dayObj.day, 1);
+  var effLevel, phaseNote;
+  if(pct <= 0.34){
+    effLevel  = 'Beginner';
+    phaseNote = 'This day is in the FOUNDATIONS phase of a zero-to-advanced journey — assume the learner knows NOTHING. Explain the absolute basics super slowly, define every word, but still go genuinely deep (the "why" behind everything), not surface-level.';
+  } else if(pct <= 0.67){
+    effLevel  = 'Intermediate';
+    phaseNote = 'This day is in the INTERMEDIATE phase — the learner already knows the basics from earlier days, so go deeper, connect concepts, show how things work under the hood, and use realistic examples.';
+  } else {
+    effLevel  = 'Advanced';
+    phaseNote = 'This day is in the COMPLETE-ADVANCED phase — the learner has solid fundamentals now, so teach complex topics, internals, edge cases, best practices, performance/optimization and real-world application at expert depth (while keeping explanations clear).';
   }
 
-  return 'You are a world-class ' + topic + ' instructor and technical writer, famous for making hard concepts feel simple for ABSOLUTE BEGINNERS.\n'
-    + 'Write a COMPLETE, in-depth lesson for ONE day of a ' + effLevel + '-level "' + topic + '" course.\n'
-    + (phaseNote ? phaseNote + '\n' : '')
+  return 'You are a world-class ' + topic + ' instructor and technical writer, famous for making hard concepts feel simple for ABSOLUTE BEGINNERS while still teaching at EXPERT depth.\n'
+    + 'Write a COMPLETE, in-depth, NEXT-LEVEL lesson for ONE day of a "' + topic + '" course. This must be the single best explanation of this topic the learner has ever read — deep and thorough, never average or shallow. Current depth target: ' + effLevel + '.\n'
+    + phaseNote + '\n'
     + 'Write EVERYTHING in ' + language + ' (friendly, warm, encouraging tone).\n\n'
     + 'DAY ' + dayObj.day + ' — ' + dayObj.title + '\n'
     + 'Topics to cover fully and clearly: ' + topics + '\n\n'
@@ -224,10 +221,11 @@ function buildContentPrompt(topic, level, language, dayObj, totalDays){
     + '4. <h3>Common Mistakes</h3> — a <ul> of 3-4 beginner mistakes and how to avoid each.\n'
     + '5. <h3>Key Takeaways</h3> — a <ul> summarizing the most important points in one line each.\n'
     + '6. <h3>Practice Task</h3> — 1-2 small hands-on exercises the learner can try today.\n\n'
-    + 'QUALITY RULES (very important):\n'
-    + '- Be thorough and detailed: aim for 900-1400 words of genuinely useful teaching.\n'
-    + '- Define every technical term the first time it appears.\n'
-    + '- Short paragraphs, use <strong> for key terms, <ul>/<li> for lists. No fluff — every line must teach.\n'
+    + 'QUALITY RULES (this content must be NEXT-LEVEL, never average):\n'
+    + '- Be genuinely deep and thorough: aim for 1200-1800 words of real teaching — explain the "why" and the "how", not just the "what".\n'
+    + '- Define every technical term the first time it appears, and use at least one clear real-world analogy per major concept.\n'
+    + '- Go beyond the obvious: include the reasoning behind each idea, when/why to use it, and how it connects to earlier days.\n'
+    + '- Short paragraphs, use <strong> for key terms, <ul>/<li> for lists. No filler, no repetition — every line must teach something new.\n'
     + '- Use ONLY these tags: <h3>,<h4>,<p>,<ul>,<ol>,<li>,<strong>,<em>,<code>,<pre>,<blockquote>. '
     + 'NEVER output <html>,<head>,<body>,<style>,<script>.\n\n'
     + 'Return ONLY valid JSON, no markdown, no backticks:\n'

@@ -138,13 +138,14 @@ label { color: rgba(255,255,255,0.6); font-size: 13px; display: block; margin-bo
             </select>
           </div>
           <div>
-            <label>Level *</label>
+            <label>Level <span style="color:rgba(255,255,255,0.4);font-weight:400">(optional)</span></label>
             <select id="level" class="input-f">
+              <option value="Beginner to Advanced">Beginner to Advanced (recommended)</option>
               <option value="Beginner">Beginner</option>
               <option value="Intermediate">Intermediate</option>
               <option value="Advanced">Advanced</option>
-              <option value="Beginner to Advanced">Beginner → Advanced (Full Journey)</option>
             </select>
+            <p style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:6px">Koi bhi chuno - har course beginner se complete advanced tak hi banega.</p>
           </div>
           <div>
             <label>Language</label>
@@ -355,17 +356,18 @@ function buildPrompt(topic, totalDays, startDay, endDay, level, language, type, 
         : 'course curriculum designer. Create a '+totalDays+'-day "'+topic+'" course.';
 
     // ── Difficulty progression ──────────────────────────────────────────
-    // "Beginner to Advanced" = ONE continuous journey: the syllabus must ramp
-    // difficulty across the WHOLE course, not stay at a single level.
-    var isJourney = /beginner\s*(to|→|->|-)\s*advanced/i.test(level);
-    var levelRule = isJourney
-        ? 'DIFFICULTY JOURNEY (very important): This is a single "Zero to Advanced" course of '+totalDays+' days. '
-          + 'Ramp the difficulty smoothly across the full course: roughly the first third = absolute-beginner FOUNDATIONS '
-          + '(core concepts, vocabulary, simple examples); the middle third = INTERMEDIATE (deeper concepts, real use-cases, '
-          + 'combining ideas); the final third = ADVANCED (complex topics, best practices, optimization, real-world projects). '
-          + 'You are generating days '+startDay+'-'+endDay+' of '+totalDays+', so choose topics that match exactly where these days '
-          + 'fall in that beginner→advanced journey, building on everything taught before.'
-        : 'Level: '+level+' — keep every day consistent with this difficulty level.';
+    // EVERY course is now a single continuous "Zero to Advanced" journey,
+    // no matter which level the user picked. The level dropdown is optional;
+    // the syllabus ALWAYS ramps from absolute-beginner foundations to fully
+    // advanced, real-world mastery.
+    var levelRule =
+          'DIFFICULTY JOURNEY (MANDATORY for every course): This is a single "Zero to COMPLETE Advanced" journey of '+totalDays+' days. '
+        + 'Ignore any single fixed level — ALWAYS ramp the difficulty smoothly across the full course: '
+        + 'roughly the first third = absolute-beginner FOUNDATIONS (core concepts, vocabulary, simple examples, assume zero prior knowledge); '
+        + 'the middle third = INTERMEDIATE (deeper concepts, real use-cases, combining ideas); '
+        + 'the final third = COMPLETE ADVANCED (complex topics, internals, best practices, performance/optimization, and real-world projects so the learner reaches true mastery). '
+        + 'You are generating days '+startDay+'-'+endDay+' of '+totalDays+', so choose topics that match exactly where these days '
+        + 'fall in that beginner→advanced journey, building on everything taught before. By the last day the learner must be at an expert/advanced level.';
 
     // ── Quiz rule (STRICT) ──────────────────────────────────────────────
     // Quiz comes ONLY on every 7th day (7, 14, 21, 28 ...). Those days are
