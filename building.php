@@ -62,11 +62,16 @@ var AI_SETTINGS = null;
 // ─── PROVIDER CONFIG ──────────────────────────────────────────────────────────
 // Default model lists per provider (fallback if no saved model)
 var PROVIDER_MODELS = {
-  gemini: ['gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash','gemini-2.5-pro','gemini-1.5-pro'],
-  groq:   ['llama-3.3-70b-versatile','llama-3.1-8b-instant','qwen/qwen3-32b','openai/gpt-oss-20b','mixtral-8x7b-32768','gemma2-9b-it'],
+  gemini: ['gemini-2.5-flash','gemini-2.0-flash','gemini-2.5-pro','gemini-2.0-flash-lite'],
+  groq:   ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','qwen/qwen3-32b','openai/gpt-oss-20b'],
   openai: ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'],
   grok:   ['grok-3-fast','grok-3','grok-2']
 };
+
+// Max output tokens — 4096 is high enough for a full 1200-1800 word lesson but
+// low enough that the smaller fallback models don't reject the request (413)
+// and we don't burn through per-minute token limits too fast.
+var MAX_OUTPUT_TOKENS = 4096;
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
@@ -117,7 +122,7 @@ function buildProviderChain(settings){
       if(models.indexOf(m) === -1) models.push(m);
     });
 
-    chain.push({ provider: p, keys: keys, models: models, deadKeys: [] });
+    chain.push({ provider: p, keys: keys, models: models, deadKeys: [], deadModels: [] });
   });
 
   return chain;
@@ -130,7 +135,7 @@ function callGemini(apiKey, model, prompt){
   return fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey,
     { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.6, maxOutputTokens:8000} }),
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.6, maxOutputTokens:MAX_OUTPUT_TOKENS} }),
       signal: ctrl.signal }
   ).then(function(res){
     clearTimeout(timer);
@@ -154,7 +159,7 @@ function callOpenAIStyle(endpoint, apiKey, model, prompt){
   return fetch(endpoint, {
     method:'POST',
     headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+apiKey},
-    body: JSON.stringify({ model:model, messages:[{role:'user',content:prompt}], max_tokens:8000, temperature:0.6 }),
+    body: JSON.stringify({ model:model, messages:[{role:'user',content:prompt}], max_tokens:MAX_OUTPUT_TOKENS, temperature:0.6 }),
     signal: ctrl.signal
   }).then(function(res){
     clearTimeout(timer);
@@ -287,41 +292,42 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
   // Track per-provider rate limit cooldowns
   var rateLimitUntil = {}; // provider -> timestamp when usable again
 
-  var MAX_GLOBAL_ATTEMPTS = 20; // max total attempts across all providers
-  var attempt = 0;
+  var MAX_CALLS  = 26;   // max REAL api calls (cooldown waits don't count)
+  var callCount  = 0;    // counts only actual API calls
+  var loopGuard  = 0;    // hard safety against infinite loops
   var quizRetryCount = 0;
 
-  while(attempt < MAX_GLOBAL_ATTEMPTS){
-    attempt++;
+  // Helper: live (non-dead) keys / models for a provider entry
+  function liveKeysOf(c){   return c.keys.filter(function(k){ return c.deadKeys.indexOf(k) === -1; }); }
+  function liveModelsOf(c){ return c.models.filter(function(m){ return c.deadModels.indexOf(m) === -1; }); }
 
-    // Find the best available provider right now
+  while(callCount < MAX_CALLS && loopGuard < 300){
+    loopGuard++;
+
+    // Find the best available provider right now (live key + live model + not cooling down)
     var selectedProvider = null;
     var selectedChain    = null;
 
     for(var ci = 0; ci < chain.length; ci++){
       var c = chain[ci];
-      var liveKeys = c.keys.filter(function(k){ return c.deadKeys.indexOf(k) === -1; });
-      if(liveKeys.length === 0) continue; // all keys dead for this provider
-
-      var cooldown = rateLimitUntil[c.provider] || 0;
-      if(Date.now() < cooldown) continue; // still in cooldown
-
+      if(liveKeysOf(c).length === 0)   continue; // all keys dead
+      if(liveModelsOf(c).length === 0) continue; // all models dead/unusable
+      if(Date.now() < (rateLimitUntil[c.provider] || 0)) continue; // cooling down
       selectedProvider = c;
       selectedChain    = ci;
       break;
     }
 
-    // If no provider available — wait for the earliest cooldown to expire
+    // No provider ready — wait for the earliest cooldown (does NOT consume a call)
     if(!selectedProvider){
       var earliest = Infinity;
       chain.forEach(function(c){
-        var liveKeys = c.keys.filter(function(k){ return c.deadKeys.indexOf(k) === -1; });
-        if(liveKeys.length > 0 && rateLimitUntil[c.provider]){
+        if(liveKeysOf(c).length > 0 && liveModelsOf(c).length > 0 && rateLimitUntil[c.provider]){
           earliest = Math.min(earliest, rateLimitUntil[c.provider]);
         }
       });
       if(earliest === Infinity){
-        log('  ❌ All providers exhausted / no valid keys', 'err');
+        log('  ❌ All providers exhausted / no valid keys or models', 'err');
         return {success: false};
       }
       var waitMs = Math.max(0, earliest - Date.now()) + 1000;
@@ -330,16 +336,16 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
       continue;
     }
 
-    // Pick a live key (round-robin within provider)
-    var liveKeys = selectedProvider.keys.filter(function(k){ return selectedProvider.deadKeys.indexOf(k) === -1; });
-    var keyIdx   = attempt % liveKeys.length;
-    var apiKey   = liveKeys[keyIdx];
+    // Pick a live key + live model (rotate as real calls accumulate)
+    var liveKeys   = liveKeysOf(selectedProvider);
+    var liveModels = liveModelsOf(selectedProvider);
+    var keyIdx     = callCount % liveKeys.length;
+    var modelIdx   = Math.floor(callCount / liveKeys.length) % liveModels.length;
+    var apiKey     = liveKeys[keyIdx];
+    var model      = liveModels[modelIdx];
 
-    // Pick model (cycle through on errors)
-    var modelIdx = Math.floor((attempt - 1) / liveKeys.length) % selectedProvider.models.length;
-    var model    = selectedProvider.models[modelIdx];
-
-    log('  Day ' + dayObj.day + ' | Try ' + attempt + ': [' + selectedProvider.provider.toUpperCase() + '] ' + model + ' (Key ' + (keyIdx+1) + '/' + liveKeys.length + ')', 'spin');
+    callCount++;
+    log('  Day ' + dayObj.day + ' | Try ' + callCount + ': [' + selectedProvider.provider.toUpperCase() + '] ' + model + ' (Key ' + (keyIdx+1) + '/' + liveKeys.length + ')', 'spin');
 
     var res = await callAPI(selectedProvider.provider, apiKey, model, prompt);
 
@@ -427,10 +433,16 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
       continue;
     }
 
-    if(res.code === 404){
-      // Model not found — try next model within same provider
-      log('  ⚠️ ' + model + ' not found — next model...', 'warn');
-      await sleep(1000);
+    if(res.code === 404 || res.code === 413 || res.code === 400){
+      // Model permanently unusable for this run (decommissioned / payload too big /
+      // bad request). Add it to the skip-list so we never waste another call on it.
+      log('  ⚠️ ' + model + ' unusable (' + res.code + ') — skipping this model', 'warn');
+      if(selectedProvider.deadModels.indexOf(model) === -1) selectedProvider.deadModels.push(model);
+      var liveLeft = liveModelsOf(selectedProvider).length;
+      if(liveLeft === 0){
+        log('  🔴 ' + selectedProvider.provider.toUpperCase() + ' — no usable models left, provider skip', 'err');
+      }
+      await sleep(400);
       continue;
     }
 
@@ -547,8 +559,8 @@ async function retryFailed(){
   var toRetry = failedDays.slice();
   failedDays  = [];
   var chain   = window._chain;
-  // Reset dead keys and rate limits for retry
-  chain.forEach(function(c){ c.deadKeys = []; });
+  // Reset dead keys, dead models and rate limits for a fresh retry
+  chain.forEach(function(c){ c.deadKeys = []; c.deadModels = []; });
 
   log('🔄 Retrying ' + toRetry.length + ' failed day(s)...', 'spin');
 
