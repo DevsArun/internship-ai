@@ -130,7 +130,7 @@ function callGemini(apiKey, model, prompt){
   return fetch(
     'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey,
     { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.5, maxOutputTokens:4096} }),
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.6, maxOutputTokens:8000} }),
       signal: ctrl.signal }
   ).then(function(res){
     clearTimeout(timer);
@@ -154,7 +154,7 @@ function callOpenAIStyle(endpoint, apiKey, model, prompt){
   return fetch(endpoint, {
     method:'POST',
     headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+apiKey},
-    body: JSON.stringify({ model:model, messages:[{role:'user',content:prompt}], max_tokens:4096, temperature:0.5 }),
+    body: JSON.stringify({ model:model, messages:[{role:'user',content:prompt}], max_tokens:8000, temperature:0.6 }),
     signal: ctrl.signal
   }).then(function(res){
     clearTimeout(timer);
@@ -182,24 +182,49 @@ function callAPI(provider, apiKey, model, prompt){
   return Promise.resolve({ok:false, code:0, msg:'UNKNOWN_PROVIDER'});
 }
 
-// ─── PROMPT BUILDER ───────────────────────────────────────────────────────────
-function buildPrompt(topic, level, language, dayObj, includeQuiz){
-  var quizInstr = (includeQuiz && dayObj.has_quiz)
-    ? 'Include "quiz" array with exactly 10 MCQ objects: {"question":"...","options":["A","B","C","D"],"correct_index":0,"explanation":"..."}'
-    : '"quiz":[]';
-  return 'You are an expert ' + topic + ' instructor.\n'
-    + 'Generate complete educational content for ONE day of a course.\n'
-    + 'Level: ' + level + ' | Language: ' + language + '\n\n'
-    + 'Day: ' + dayObj.day + '\n'
-    + 'Title: ' + dayObj.title + '\n'
-    + 'Topics: ' + (dayObj.topics || []).join(', ') + '\n\n'
-    + 'Instructions:\n'
-    + '- Write detailed HTML using <h3>,<p>,<ul>,<li>,<code>,<strong>\n'
-    + '- Minimum 500 words of content\n'
-    + '- Cover ALL topics listed above\n'
-    + '- ' + quizInstr + '\n\n'
+// ─── PROMPT BUILDERS ──────────────────────────────────────────────────────────
+// Two distinct modes:
+//   1. CONTENT DAY  -> rich, beginner-friendly, in-depth lesson (NO quiz)
+//   2. QUIZ DAY     -> ONLY a 10-question quiz on the previous 6 days (NO lesson content)
+
+function buildContentPrompt(topic, level, language, dayObj){
+  var topics = (dayObj.topics || []).join(', ');
+  return 'You are a world-class ' + topic + ' instructor and technical writer, famous for making hard concepts feel simple for ABSOLUTE BEGINNERS.\n'
+    + 'Write a COMPLETE, in-depth lesson for ONE day of a ' + level + '-level "' + topic + '" course.\n'
+    + 'Write EVERYTHING in ' + language + ' (friendly, warm, encouraging tone).\n\n'
+    + 'DAY ' + dayObj.day + ' — ' + dayObj.title + '\n'
+    + 'Topics to cover fully and clearly: ' + topics + '\n\n'
+    + 'Structure the lesson EXACTLY in this order using clean semantic HTML:\n'
+    + '1. <h3>Aaj kya seekhenge</h3> — 2-3 lines: what we learn today and WHY it matters in real life.\n'
+    + '2. For EVERY topic above: a <h3>topic name</h3>, then explain it from scratch (assume zero prior knowledge), '
+    + 'give a simple real-world analogy, and at least one concrete worked example.\n'
+    + '3. <h3>Practical Example</h3> — where relevant include a well-commented <pre><code>...</code></pre> block, '
+    + 'then explain that code step-by-step in plain words.\n'
+    + '4. <h3>Common Mistakes</h3> — a <ul> of 3-4 beginner mistakes and how to avoid each.\n'
+    + '5. <h3>Key Takeaways</h3> — a <ul> summarizing the most important points in one line each.\n'
+    + '6. <h3>Practice Task</h3> — 1-2 small hands-on exercises the learner can try today.\n\n'
+    + 'QUALITY RULES (very important):\n'
+    + '- Be thorough and detailed: aim for 900-1400 words of genuinely useful teaching.\n'
+    + '- Define every technical term the first time it appears.\n'
+    + '- Short paragraphs, use <strong> for key terms, <ul>/<li> for lists. No fluff — every line must teach.\n'
+    + '- Use ONLY these tags: <h3>,<h4>,<p>,<ul>,<ol>,<li>,<strong>,<em>,<code>,<pre>,<blockquote>. '
+    + 'NEVER output <html>,<head>,<body>,<style>,<script>.\n\n'
     + 'Return ONLY valid JSON, no markdown, no backticks:\n'
-    + '{"day":' + dayObj.day + ',"content":"[HTML HERE]","image_query":"short search query","quiz":[]}';
+    + '{"day":' + dayObj.day + ',"content":"<h3>...</h3>...","image_query":"2-4 word image search query","quiz":[]}';
+}
+
+function buildQuizPrompt(topic, level, language, dayObj, weekTopics, weekNum){
+  return 'You are an expert ' + topic + ' instructor creating a WEEKLY REVISION QUIZ.\n'
+    + 'This is the quiz for WEEK ' + weekNum + ' of a ' + level + '-level "' + topic + '" course. Language: ' + language + '.\n\n'
+    + 'The quiz MUST test ONLY what the learner studied in the last 6 days of this week. Those topics are:\n'
+    + weekTopics + '\n\n'
+    + 'Create EXACTLY 10 multiple-choice questions that fairly cover ONLY the topics listed above '
+    + '(do NOT ask anything outside these topics, and do NOT teach any new content).\n'
+    + 'Mix the difficulty: about 4 easy, 4 medium, 2 challenging. '
+    + 'Each question must have exactly 4 options, exactly one correct answer, and a short clear explanation of why it is correct.\n\n'
+    + 'Return ONLY valid JSON, no markdown, no backticks. Keep "content" an empty string (this is a quiz-only day):\n'
+    + '{"day":' + dayObj.day + ',"content":"","image_query":"",'
+    + '"quiz":[{"question":"...","options":["opt A","opt B","opt C","opt D"],"correct_index":0,"explanation":"..."}]}';
 }
 
 // ─── JSON PARSER ─────────────────────────────────────────────────────────────
@@ -227,8 +252,18 @@ function parseOneDayJSON(raw){
 
 // ─── CORE: GENERATE ONE DAY WITH FULL PROVIDER CHAIN FALLBACK ─────────────────
 // This is the KEY fix — it properly cycles through ALL providers, not just retrying same one
-async function generateOneDay(chain, dayObj, topic, level, language, includeQuiz){
-  var prompt = buildPrompt(topic, level, language, dayObj, includeQuiz);
+async function generateOneDay(chain, dayObj, meta, weekTopics){
+  var topic    = meta.topic;
+  var level    = meta.level;
+  var language = meta.language;
+
+  // Quiz day ONLY when include_quiz is on AND the day number is a multiple of 7.
+  var isQuizDay = !!(meta.include_quiz && dayObj.has_quiz);
+  var weekNum   = Math.ceil(dayObj.day / 7);
+
+  var prompt = isQuizDay
+    ? buildQuizPrompt(topic, level, language, dayObj, weekTopics, weekNum)
+    : buildContentPrompt(topic, level, language, dayObj);
 
   // Track per-provider rate limit cooldowns
   var rateLimitUntil = {}; // provider -> timestamp when usable again
@@ -297,8 +332,8 @@ async function generateOneDay(chain, dayObj, topic, level, language, includeQuiz
         continue;
       }
 
-      // Validate quiz if needed
-      if(includeQuiz && dayObj.has_quiz){
+      // Validate quiz on quiz days — they MUST have a real quiz
+      if(isQuizDay){
         var quiz = parsed.quiz || [];
         if(!Array.isArray(quiz) || quiz.length < 5){
           quizRetryCount++;
@@ -307,12 +342,27 @@ async function generateOneDay(chain, dayObj, topic, level, language, includeQuiz
             await sleep(1500);
             continue;
           } else {
-            log('  ⚠️ Quiz still failing after 3 tries — accepting without quiz', 'warn');
-            parsed.quiz = [];
+            log('  ⚠️ Quiz still failing after 3 tries — accepting as-is', 'warn');
           }
         } else {
-          log('  📝 Quiz: ' + quiz.length + '/' + quiz.length + ' valid', 'ok');
+          log('  📝 Quiz: ' + quiz.length + ' questions ready (Week ' + weekNum + ' revision)', 'ok');
         }
+        // Normalize every quiz item: ensure a numeric `correct` index exists
+        parsed.quiz = (parsed.quiz || []).map(function(q){
+          var ci = (typeof q.correct_index === 'number') ? q.correct_index
+                 : (typeof q.correct === 'number')       ? q.correct
+                 : parseInt(q.correct_index, 10);
+          if(isNaN(ci) || ci < 0 || ci > 3) ci = 0;
+          q.correct       = ci;
+          q.correct_index = ci;
+          return q;
+        });
+        // Quiz day = NO learning content
+        parsed.content     = '';
+        parsed.image_query = '';
+      } else {
+        // Content day = never carry a quiz
+        parsed.quiz = [];
       }
 
       return {success: true, data: parsed};
@@ -391,6 +441,21 @@ async function loadSettings(){
   return false;
 }
 
+// ─── WEEK TOPICS COLLECTOR ─────────────────────────────────────────────────────
+// For a quiz day at syllabus index `idx`, gather the titles + topics of the
+// content days that belong to the SAME week (the previous up-to-6 days).
+function getWeekTopics(idx){
+  var quizDay = syllabus[idx].day;
+  var lines   = [];
+  for(var j = idx - 1; j >= 0; j--){
+    var prev = syllabus[j];
+    if(prev.has_quiz) break;            // reached the previous week's quiz day
+    if(quizDay - prev.day > 6) break;   // safety: stay within this week
+    lines.unshift('Day ' + prev.day + ': ' + (prev.title || '') + ' — ' + (prev.topics || []).join(', '));
+  }
+  return lines.length ? lines.join('\n') : ('Topics covered in the previous days of "' + (meta.topic || '') + '".');
+}
+
 async function generateAll(chain, meta){
   failedDays = [];
   var doneDays = 0, t0 = Date.now();
@@ -407,7 +472,8 @@ async function generateAll(chain, meta){
       log('── Batch ' + bNum + '/' + totalBatches + ': Day ' + syllabus[i].day + '–' + syllabus[bEnd].day + ' ──', 'spin');
     }
 
-    var res = await generateOneDay(chain, dayObj, meta.topic, meta.level, meta.language, meta.include_quiz);
+    var weekTopics = (meta.include_quiz && dayObj.has_quiz) ? getWeekTopics(i) : '';
+    var res = await generateOneDay(chain, dayObj, meta, weekTopics);
 
     if(res.success){
       var item = res.data;
@@ -471,7 +537,8 @@ async function retryFailed(){
     var idx    = toRetry[ri];
     var dayObj = syllabus[idx];
     log('── Retry: Day ' + dayObj.day + ' ──', 'spin');
-    var res = await generateOneDay(chain, dayObj, meta.topic, meta.level, meta.language, meta.include_quiz);
+    var weekTopics = (meta.include_quiz && dayObj.has_quiz) ? getWeekTopics(idx) : '';
+    var res = await generateOneDay(chain, dayObj, meta, weekTopics);
     if(res.success){
       var item = res.data;
       allContent[item.day] = {

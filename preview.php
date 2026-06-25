@@ -359,8 +359,10 @@ function showDay(dayNum) {
   let quizHtml = '';
   if (day.has_quiz && day.quiz && day.quiz.length > 0) {
     const qItems = day.quiz.map((q, qi) => {
+      const correctIdx = (typeof q.correct_index === 'number') ? q.correct_index
+                       : (typeof q.correct === 'number') ? q.correct : 0;
       const opts = q.options.map((opt, oi) =>
-        `<div class="quiz-option" onclick="checkAns(this, ${qi}, ${oi}, ${q.correct})" data-qi="${qi}" data-oi="${oi}">
+        `<div class="quiz-option" onclick="checkAns(this, ${qi}, ${oi}, ${correctIdx})" data-qi="${qi}" data-oi="${oi}">
           <span style="font-weight:700;margin-right:8px">${['A','B','C','D'][oi]}.</span>${opt}
         </div>`
       ).join('');
@@ -396,25 +398,42 @@ function showDay(dayNum) {
     `<span class="topic-badge">${t}</span>`
   ).join('');
 
-  // Full content
-  document.getElementById('contentCard').innerHTML = `
+  // Quiz days = pure revision quiz, NO learning content / no image search.
+  const isQuizDay = !!day.has_quiz;
+  const weekNum   = Math.ceil(day.day / 7);
+
+  const headerBlock = `
     <div style="margin-bottom:24px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
         <span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.7)">DAY ${day.day}</span>
-        ${day.has_quiz ? '<span style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;color:#fbbf24">📝 QUIZ DAY</span>' : ''}
+        ${isQuizDay ? '<span style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;color:#fbbf24">📝 QUIZ DAY — WEEK '+weekNum+' REVISION</span>' : ''}
       </div>
       <h2 style="font-size:24px;font-weight:800;margin-bottom:12px">${day.title}</h2>
-      <div>${topicsHtml}</div>
+      ${isQuizDay ? '' : `<div>${topicsHtml}</div>`}
     </div>
-
     <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin-bottom:28px">
-
-    ${imgSearch}
-
-    <div class="day-content">${day.content || '<p style="color:rgba(255,255,255,0.4)">Content not available.</p>'}</div>
-
-    ${quizHtml}
   `;
+
+  let bodyBlock;
+  if (isQuizDay) {
+    // Only the quiz — a short intro line, then the questions.
+    const introHtml = `
+      <div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:18px 20px;margin-bottom:8px">
+        <p style="color:#fbbf24;font-size:14px;font-weight:700;margin-bottom:4px">📝 Week ${weekNum} Revision Quiz</p>
+        <p style="color:rgba(255,255,255,0.55);font-size:13px;line-height:1.6">Yeh quiz sirf pichle 6 din me jo padha uska revision hai. Koi naya content nahi — apna knowledge test karo!</p>
+      </div>
+    `;
+    const quizBody = (day.quiz && day.quiz.length > 0)
+      ? quizHtml
+      : '<p style="color:rgba(255,255,255,0.4);padding:24px 0;text-align:center">Quiz generate nahi ho paya — preview se retry karo.</p>';
+    bodyBlock = introHtml + quizBody;
+  } else {
+    // Normal content day — lesson + image search helper.
+    bodyBlock = imgSearch + `<div class="day-content">${day.content || '<p style="color:rgba(255,255,255,0.4)">Content not available.</p>'}</div>`;
+  }
+
+  // Full content
+  document.getElementById('contentCard').innerHTML = headerBlock + bodyBlock;
 
   // Prev/Next
   const idx  = course.findIndex(d => d.day === dayNum);

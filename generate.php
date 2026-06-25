@@ -163,7 +163,7 @@ label { color: rgba(255,255,255,0.6); font-size: 13px; display: block; margin-bo
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px">
         <div>
           <p style="font-weight:600;font-size:14px;margin-bottom:3px">📝 Quiz Include Karo</p>
-          <p style="color:rgba(255,255,255,0.4);font-size:12px">Har 7 days ke baad auto quiz generate hoga</p>
+          <p style="color:rgba(255,255,255,0.4);font-size:12px">Sirf har 7ve din quiz (us week ka revision) — us din koi naya content nahi</p>
         </div>
         <div class="toggle on" id="quizToggle" onclick="toggleQuiz()">
           <div class="toggle-dot"></div>
@@ -349,11 +349,28 @@ function parseJSON(raw) {
 // ── Build syllabus prompt ──────────────────────────
 function buildPrompt(topic, totalDays, startDay, endDay, level, language, type, quiz) {
     var n    = endDay - startDay + 1;
-    var q    = quiz ? 'Set has_quiz:true for days divisible by 7, else false.' : 'has_quiz always false.';
     var role = type==='internship'
         ? 'internship program designer. Create practical daily tasks for a '+totalDays+'-day "'+topic+'" internship.'
         : 'course curriculum designer. Create a '+totalDays+'-day "'+topic+'" course.';
-    return 'You are an expert '+role+'\nLevel: '+level+' | Language: '+language+'\nGenerate ONLY days '+startDay+' to '+endDay+' (exactly '+n+' days).\n'+q+'\nReturn ONLY valid JSON array, no markdown:\n[{"day":'+startDay+',"title":"...","topics":["t1","t2","t3"],"image_query":"...","has_quiz":false}]';
+
+    // ── Quiz rule (STRICT) ──────────────────────────────────────────────
+    // Quiz comes ONLY on every 7th day (7, 14, 21, 28 ...). Those days are
+    // pure REVISION + QUIZ days — NO brand-new concept is taught on them.
+    // All other days teach fresh content with has_quiz:false.
+    var quizRule = quiz
+        ? 'QUIZ RULE (follow EXACTLY): A day is a quiz day ONLY if its day number is a multiple of 7 (7,14,21,28,...). '
+          + 'For those quiz days set "has_quiz":true, give the title as "Week N — Revision & Quiz", '
+          + 'and DO NOT introduce any new concept on them (they only revise the previous 6 days). '
+          + 'For EVERY other day set "has_quiz":false and teach fresh topics. Never put a quiz on a non-multiple-of-7 day.'
+        : 'Set "has_quiz":false for every single day.';
+
+    return 'You are an expert '+role+'\n'
+        + 'Level: '+level+' | Language: '+language+'\n'
+        + 'Generate ONLY days '+startDay+' to '+endDay+' (exactly '+n+' days).\n'
+        + 'Build a logical learning progression: each fresh day should cover 2-3 focused, clearly-scoped topics that build on earlier days.\n'
+        + quizRule + '\n'
+        + 'Return ONLY a valid JSON array, no markdown:\n'
+        + '[{"day":'+startDay+',"title":"...","topics":["t1","t2","t3"],"image_query":"...","has_quiz":false}]';
 }
 
 // ── Master call with full key+model fallback ───────
@@ -475,6 +492,14 @@ async function startGenerate() {
             allSyllabus = allSyllabus.concat(result.data);
             updateProgress('✅ Batch '+(b+1)+'/'+totalBatch+' done!', allSyllabus.length, days);
         }
+
+        // ── ENFORCE quiz ONLY on every 7th day (deterministic, AI-proof) ──
+        // Chahe AI kuch bhi return kare, final faisla yahi code karega:
+        // quiz sirf day 7,14,21,28... pe. Baaki har din pure content.
+        allSyllabus.forEach(function(d) {
+            d.day      = parseInt(d.day, 10);
+            d.has_quiz = includeQuiz && (d.day % 7 === 0);
+        });
 
         // History save
         updateProgress('💾 Saving...', days, days);
