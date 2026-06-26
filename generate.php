@@ -380,11 +380,13 @@ function buildPrompt(topic, totalDays, startDay, endDay, level, language, type, 
           + 'For EVERY other day set "has_quiz":false and teach fresh topics. Never put a quiz on a non-multiple-of-7 day.'
         : 'Set "has_quiz":false for every single day.';
 
-    return 'You are an expert '+role+'\n'
+    return 'You are a senior, industry-expert '+role+'\n'
         + levelRule + '\n'
-        + 'Language: '+language+'\n'
+        + 'Language: write all titles and topics in '+language+' (technical keywords stay in English).\n'
         + 'Generate ONLY days '+startDay+' to '+endDay+' (exactly '+n+' days).\n'
-        + 'Build a logical learning progression: each fresh day should cover 2-3 focused, clearly-scoped topics that build on earlier days.\n'
+        + 'Design a professional, well-structured curriculum like a premium paid course: each fresh day must have a clear, '
+        + 'specific title and 2-3 focused, concrete, industry-relevant sub-topics (NOT vague one-word topics) that logically '
+        + 'build on earlier days. Avoid repeating the same generic topics across days — each day must move the learner forward.\n'
         + quizRule + '\n'
         + 'Return ONLY a valid JSON array, no markdown:\n'
         + '[{"day":'+startDay+',"title":"...","topics":["t1","t2","t3"],"image_query":"...","has_quiz":false}]';

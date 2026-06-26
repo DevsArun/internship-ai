@@ -109,6 +109,18 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
           <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Grok-3, Grok-4...</div>
           <span class="badge-paid">PAID</span>
         </div>
+        <div class="provider-btn" id="btnOpenrouter" onclick="selectAI('openrouter')">
+          <div style="font-size:26px;margin-bottom:4px">🌐</div>
+          <div style="font-weight:700;font-size:14px">OpenRouter</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">DeepSeek V3, Llama 3.3 70B...</div>
+          <span class="badge-free">FREE</span>
+        </div>
+        <div class="provider-btn" id="btnCerebras" onclick="selectAI('cerebras')">
+          <div style="font-size:26px;margin-bottom:4px">🧠</div>
+          <div style="font-weight:700;font-size:14px">Cerebras</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Llama 3.3 70B (ultra-fast)...</div>
+          <span class="badge-free">FREE</span>
+        </div>
       </div>
 
       <!-- GEMINI -->
@@ -218,6 +230,60 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
           </div>
         </div>
       </div>
+
+      <!-- OPENROUTER -->
+      <div id="openrouterSection" style="display:none">
+        <div class="key-group">
+          <div class="key-item">
+            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://openrouter.ai/keys" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
+            <div style="position:relative"><input type="password" id="openrouterKey" class="input-f" placeholder="sk-or-..."><button type="button" onclick="tv('openrouterKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+          <div class="key-item">
+            <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
+            <div style="position:relative"><input type="password" id="openrouterKey2" class="input-f" placeholder="sk-or-..."><button type="button" onclick="tv('openrouterKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+          <div class="key-item">
+            <label>🔑 API Key 3 <span class="badge-opt">OPTIONAL</span></label>
+            <div style="position:relative"><input type="password" id="openrouterKey3" class="input-f" placeholder="sk-or-..."><button type="button" onclick="tv('openrouterKey3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+        </div>
+        <button class="btn-test" id="testOpenrouterBtn" onclick="testModels('openrouter')">🔍 Test Keys & Auto-Select Best Model</button>
+        <div id="openrouterTestResults" style="display:none;margin-top:14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px">
+          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px">MODEL TEST RESULTS — OPENROUTER</p>
+          <div id="openrouterModelList"></div>
+          <div id="openrouterBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
+            <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
+            <select id="openrouterSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- CEREBRAS -->
+      <div id="cerebrasSection" style="display:none">
+        <div class="key-group">
+          <div class="key-item">
+            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://cloud.cerebras.ai" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
+            <div style="position:relative"><input type="password" id="cerebrasKey" class="input-f" placeholder="csk-..."><button type="button" onclick="tv('cerebrasKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+          <div class="key-item">
+            <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
+            <div style="position:relative"><input type="password" id="cerebrasKey2" class="input-f" placeholder="csk-..."><button type="button" onclick="tv('cerebrasKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+          <div class="key-item">
+            <label>🔑 API Key 3 <span class="badge-opt">OPTIONAL</span></label>
+            <div style="position:relative"><input type="password" id="cerebrasKey3" class="input-f" placeholder="csk-..."><button type="button" onclick="tv('cerebrasKey3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+        </div>
+        <button class="btn-test" id="testCerebrasBtn" onclick="testModels('cerebras')">🔍 Test Keys & Auto-Select Best Model</button>
+        <div id="cerebrasTestResults" style="display:none;margin-top:14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px">
+          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px">MODEL TEST RESULTS — CEREBRAS</p>
+          <div id="cerebrasModelList"></div>
+          <div id="cerebrasBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
+            <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
+            <select id="cerebrasSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- CONTENT SETTINGS -->
@@ -259,7 +325,7 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
 <script>
 var activeAI = 'gemini';
-var PROVIDERS = ['gemini','groq','openai','grok'];
+var PROVIDERS = ['gemini','groq','openrouter','cerebras','openai','grok'];
 
 // ── Load Settings ────────────────────────────────
 async function loadSettings() {

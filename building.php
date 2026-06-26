@@ -62,16 +62,18 @@ var AI_SETTINGS = null;
 // ─── PROVIDER CONFIG ──────────────────────────────────────────────────────────
 // Default model lists per provider (fallback if no saved model)
 var PROVIDER_MODELS = {
-  gemini: ['gemini-2.5-flash','gemini-2.0-flash','gemini-2.5-pro','gemini-2.0-flash-lite'],
-  groq:   ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','qwen/qwen3-32b','openai/gpt-oss-20b'],
-  openai: ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'],
-  grok:   ['grok-3-fast','grok-3','grok-2']
+  gemini:     ['gemini-2.5-flash','gemini-2.0-flash','gemini-2.5-pro','gemini-2.0-flash-lite'],
+  groq:       ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','qwen/qwen3-32b','openai/gpt-oss-20b'],
+  openrouter: ['deepseek/deepseek-chat-v3-0324:free','meta-llama/llama-3.3-70b-instruct:free','qwen/qwen-2.5-72b-instruct:free','google/gemini-2.0-flash-exp:free','mistralai/mistral-small-3.1-24b-instruct:free'],
+  cerebras:   ['llama-3.3-70b','qwen-3-32b','llama3.1-8b'],
+  openai:     ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'],
+  grok:       ['grok-3-fast','grok-3','grok-2']
 };
 
-// Max output tokens — 4096 is high enough for a full 1200-1800 word lesson but
-// low enough that the smaller fallback models don't reject the request (413)
-// and we don't burn through per-minute token limits too fast.
-var MAX_OUTPUT_TOKENS = 4096;
+// Max output tokens — 8000 gives room for a deep, premium 1500-2500 word lesson.
+// Smaller fallback models that can't handle this (HTTP 413) are auto-skipped,
+// so the big, capable models (llama-3.3-70b, gemini, deepseek, etc.) do the work.
+var MAX_OUTPUT_TOKENS = 8000;
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
@@ -98,9 +100,9 @@ function setProgress(pct, label){
 function buildProviderChain(settings){
   var primary = settings.active_ai_provider || 'gemini';
 
-  // All 4 providers in order: primary first
+  // All providers in order: primary first, then the rest as fallback
   var order = [primary];
-  ['gemini','groq','openai','grok'].forEach(function(p){
+  ['gemini','groq','openrouter','cerebras','openai','grok'].forEach(function(p){
     if(p !== primary) order.push(p);
   });
 
@@ -180,10 +182,12 @@ function callOpenAIStyle(endpoint, apiKey, model, prompt){
 }
 
 function callAPI(provider, apiKey, model, prompt){
-  if(provider === 'gemini') return callGemini(apiKey, model, prompt);
-  if(provider === 'groq')   return callOpenAIStyle('https://api.groq.com/openai/v1/chat/completions', apiKey, model, prompt);
-  if(provider === 'openai') return callOpenAIStyle('https://api.openai.com/v1/chat/completions', apiKey, model, prompt);
-  if(provider === 'grok')   return callOpenAIStyle('https://api.x.ai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'gemini')     return callGemini(apiKey, model, prompt);
+  if(provider === 'groq')       return callOpenAIStyle('https://api.groq.com/openai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'openrouter') return callOpenAIStyle('https://openrouter.ai/api/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'cerebras')   return callOpenAIStyle('https://api.cerebras.ai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'openai')     return callOpenAIStyle('https://api.openai.com/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'grok')       return callOpenAIStyle('https://api.x.ai/v1/chat/completions', apiKey, model, prompt);
   return Promise.resolve({ok:false, code:0, msg:'UNKNOWN_PROVIDER'});
 }
 
@@ -194,58 +198,62 @@ function callAPI(provider, apiKey, model, prompt){
 
 function buildContentPrompt(topic, level, language, dayObj, totalDays){
   var topics = (dayObj.topics || []).join(', ');
+  var lang   = language || 'English';
 
-  // EVERY course is a full beginner→advanced journey now (level is optional).
-  // The effective depth shifts as the course progresses, so each day's lesson
-  // is taught at exactly the right level — and ALWAYS at maximum, next-level depth.
+  // EVERY course is a full beginner→advanced journey (level is optional).
+  // Depth ramps as the course progresses, but quality is ALWAYS premium.
   var pct = dayObj.day / Math.max(totalDays || dayObj.day, 1);
   var effLevel, phaseNote;
   if(pct <= 0.34){
-    effLevel  = 'Beginner';
-    phaseNote = 'This day is in the FOUNDATIONS phase of a zero-to-advanced journey — assume the learner knows NOTHING. Explain the absolute basics super slowly, define every word, but still go genuinely deep (the "why" behind everything), not surface-level.';
+    effLevel  = 'Beginner / Foundations';
+    phaseNote = 'This day is in the FOUNDATIONS phase of a zero-to-professional journey. Assume the learner is a complete beginner: introduce each idea from first principles, define every term, and build intuition step by step — but still go genuinely deep (always explain the WHY, not just the WHAT). Never be shallow even though it is beginner level.';
   } else if(pct <= 0.67){
     effLevel  = 'Intermediate';
-    phaseNote = 'This day is in the INTERMEDIATE phase — the learner already knows the basics from earlier days, so go deeper, connect concepts, show how things work under the hood, and use realistic examples.';
+    phaseNote = 'This day is in the INTERMEDIATE phase. The learner already mastered the basics in earlier days, so teach deeper mechanics, how things work under the hood, trade-offs, and realistic industry-style examples that combine multiple concepts.';
   } else {
-    effLevel  = 'Advanced';
-    phaseNote = 'This day is in the COMPLETE-ADVANCED phase — the learner has solid fundamentals now, so teach complex topics, internals, edge cases, best practices, performance/optimization and real-world application at expert depth (while keeping explanations clear).';
+    effLevel  = 'Advanced / Professional';
+    phaseNote = 'This day is in the ADVANCED / PROFESSIONAL phase. The learner now has solid fundamentals, so teach at an expert level: internals, edge cases, performance, security, design patterns, best practices, and real-world production-grade application — the kind of depth a senior professional needs.';
   }
 
-  return 'You are a world-class ' + topic + ' instructor and technical writer, famous for making hard concepts feel simple for ABSOLUTE BEGINNERS while still teaching at EXPERT depth.\n'
-    + 'Write a COMPLETE, in-depth, NEXT-LEVEL lesson for ONE day of a "' + topic + '" course. This must be the single best explanation of this topic the learner has ever read — deep and thorough, never average or shallow. Current depth target: ' + effLevel + '.\n'
-    + phaseNote + '\n'
-    + 'Write EVERYTHING in ' + language + ' (friendly, warm, encouraging tone).\n\n'
+  return 'ROLE: You are a PRINCIPAL-level expert in "' + topic + '" and a world-renowned instructor whose paid premium courses sell for a high price. '
+    + 'You are writing ONE day of a flagship, premium "' + topic + '" course that takes a learner from absolute beginner to job-ready professional.\n\n'
+    + 'LANGUAGE: Write the ENTIRE lesson — every heading, sentence, list item, and code comment/explanation — in ' + lang + '. '
+    + 'Do NOT mix languages. Keep technical keywords/code in English (as is standard), but all teaching prose must be in ' + lang + '.\n\n'
+    + 'DEPTH TARGET FOR TODAY: ' + effLevel + '.\n' + phaseNote + '\n\n'
     + 'DAY ' + dayObj.day + ' — ' + dayObj.title + '\n'
-    + 'Topics to cover fully and clearly: ' + topics + '\n\n'
-    + 'Structure the lesson EXACTLY in this order using clean semantic HTML:\n'
-    + '1. <h3>Aaj kya seekhenge</h3> — 2-3 lines: what we learn today and WHY it matters in real life.\n'
-    + '2. For EVERY topic above: a <h3>topic name</h3>, then explain it from scratch (assume zero prior knowledge), '
-    + 'give a simple real-world analogy, and at least one concrete worked example.\n'
-    + '3. <h3>Practical Example</h3> — where relevant include a well-commented <pre><code>...</code></pre> block, '
-    + 'then explain that code step-by-step in plain words.\n'
-    + '4. <h3>Common Mistakes</h3> — a <ul> of 3-4 beginner mistakes and how to avoid each.\n'
-    + '5. <h3>Key Takeaways</h3> — a <ul> summarizing the most important points in one line each.\n'
-    + '6. <h3>Practice Task</h3> — 1-2 small hands-on exercises the learner can try today.\n\n'
-    + 'QUALITY RULES (this content must be NEXT-LEVEL, never average):\n'
-    + '- Be genuinely deep and thorough: aim for 1200-1800 words of real teaching — explain the "why" and the "how", not just the "what".\n'
-    + '- Define every technical term the first time it appears, and use at least one clear real-world analogy per major concept.\n'
-    + '- Go beyond the obvious: include the reasoning behind each idea, when/why to use it, and how it connects to earlier days.\n'
-    + '- Short paragraphs, use <strong> for key terms, <ul>/<li> for lists. No filler, no repetition — every line must teach something new.\n'
-    + '- Use ONLY these tags: <h3>,<h4>,<p>,<ul>,<ol>,<li>,<strong>,<em>,<code>,<pre>,<blockquote>. '
-    + 'NEVER output <html>,<head>,<body>,<style>,<script>.\n\n'
-    + 'Return ONLY valid JSON, no markdown, no backticks:\n'
-    + '{"day":' + dayObj.day + ',"content":"<h3>...</h3>...","image_query":"2-4 word image search query","quiz":[]}';
+    + 'Topics to cover completely and masterfully: ' + topics + '\n\n'
+    + 'Write a COMPLETE, in-depth, premium lesson using clean semantic HTML, structured EXACTLY like this:\n'
+    + '1. <h3>Introduction</h3> — why this topic matters, where it is used in the real world / industry, and what the learner will be able to do after this lesson.\n'
+    + '2. For EACH topic above: a <h3>topic name</h3>, then teach it thoroughly — a clear definition, the intuition behind it, a relatable real-world analogy, HOW it actually works (the mechanics), and WHEN/WHY to use it.\n'
+    + '3. <h3>Worked Examples</h3> — one or more concrete, realistic examples. Where code applies, give a complete, well-commented <pre><code>...</code></pre> block, then explain it line-by-line in plain language so a beginner fully understands.\n'
+    + '4. <h3>Real-World Application</h3> — how professionals use this on real projects; a short scenario or case.\n'
+    + '5. <h3>Best Practices & Pro Tips</h3> — a <ul> of expert tips and conventions used in industry.\n'
+    + '6. <h3>Common Mistakes</h3> — a <ul> of 3-5 mistakes beginners make and exactly how to avoid each.\n'
+    + '7. <h3>Practice Task</h3> — 1-3 hands-on exercises (increasing difficulty) the learner should try, with a hint for each.\n'
+    + '8. <h3>Key Takeaways</h3> — a <ul> crisp one-line summary of the most important points.\n\n'
+    + 'QUALITY BAR (this is PAID, premium content — treat it as worth real money):\n'
+    + '- Be genuinely deep, precise and insightful — match the quality of the best technical books and top-rated instructors. NEVER generic, NEVER filler, NEVER shallow.\n'
+    + '- Target 1500-2500 words of real teaching. Explain the "why" and the "how", with reasoning, not just definitions.\n'
+    + '- Every concept must be understandable to a beginner yet complete enough to satisfy a professional. Define terms on first use.\n'
+    + '- Use concrete numbers, realistic examples, and where relevant, comparisons/trade-offs. Connect today\'s topic to what was learned earlier.\n'
+    + '- Short, readable paragraphs. Use <strong> for key terms, <ul>/<li> for lists, <pre><code> for code, <blockquote> for important notes.\n'
+    + '- Use ONLY these tags: <h3>,<h4>,<p>,<ul>,<ol>,<li>,<strong>,<em>,<code>,<pre>,<blockquote>. NEVER output <html>,<head>,<body>,<style>,<script>, or markdown fences.\n\n'
+    + 'Return ONLY valid JSON (no markdown, no backticks). The "content" value must be a single HTML string with all quotes properly escaped:\n'
+    + '{"day":' + dayObj.day + ',"content":"<h3>Introduction</h3>...","image_query":"2-4 word image search query","quiz":[]}';
 }
 
 function buildQuizPrompt(topic, level, language, dayObj, weekTopics, weekNum){
+  var lang = language || 'English';
   return 'You are an expert ' + topic + ' instructor creating a WEEKLY REVISION QUIZ.\n'
-    + 'This is the quiz for WEEK ' + weekNum + ' of a ' + level + '-level "' + topic + '" course. Language: ' + language + '.\n\n'
+    + 'This is the quiz for WEEK ' + weekNum + ' of a premium "' + topic + '" course.\n'
+    + 'Write EVERY question, option and explanation entirely in ' + lang + ' (keep code/keywords in English as standard).\n\n'
     + 'The quiz MUST test ONLY what the learner studied in the last 6 days of this week. Those topics are:\n'
     + weekTopics + '\n\n'
-    + 'Create EXACTLY 10 multiple-choice questions that fairly cover ONLY the topics listed above '
+    + 'Create EXACTLY 10 high-quality multiple-choice questions that fairly cover ONLY the topics listed above '
     + '(do NOT ask anything outside these topics, and do NOT teach any new content).\n'
+    + 'Make the questions meaningful and conceptual (test real understanding, not trivia). '
     + 'Mix the difficulty: about 4 easy, 4 medium, 2 challenging. '
-    + 'Each question must have exactly 4 options, exactly one correct answer, and a short clear explanation of why it is correct.\n\n'
+    + 'Each question must have exactly 4 options, exactly one correct answer, and a clear explanation of why it is correct.\n\n'
     + 'Return ONLY valid JSON, no markdown, no backticks. Keep "content" an empty string (this is a quiz-only day):\n'
     + '{"day":' + dayObj.day + ',"content":"","image_query":"",'
     + '"quiz":[{"question":"...","options":["opt A","opt B","opt C","opt D"],"correct_index":0,"explanation":"..."}]}';
