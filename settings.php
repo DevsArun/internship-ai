@@ -88,29 +88,20 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
     </div>
 
     <!-- PROVIDER RECOMMENDATION -->
-    <div class="card" style="border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.04)">
-      <div class="section-title" style="color:#fbbf24">⚡ Recommended Setup (Sabse Best)</div>
-      <div class="section-sub">Kisi bhi length ka course (7 din se 365 din tak) seamlessly generate karne ke liye</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:14px">
-          <p style="color:#4ade80;font-weight:700;font-size:13px;margin-bottom:6px">🥇 Best Quality Setup</p>
-          <p style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.7">
-            <strong>Primary:</strong> 🐳 DeepSeek (deepseek-chat)<br>
-            <strong>Fallback:</strong> ✨ Gemini 2.0 Flash<br>
-            <strong>Why:</strong> DeepSeek V3 = best content quality. Free trial phir ~₹15-25 per 90-day course. Gemini backup me high limit (1500 req/day).
-          </p>
-        </div>
-        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:12px;padding:14px">
-          <p style="color:#93c5fd;font-weight:700;font-size:13px;margin-bottom:6px">🆓 100% Free Setup</p>
-          <p style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.7">
-            <strong>Primary:</strong> ✨ Gemini 2.0 Flash<br>
-            <strong>Fallback:</strong> 🚀 Groq (Llama 3.3 70B)<br>
-            <strong>Why:</strong> Gemini = 1500 req/day free, koi bhi course ek din me complete. No card needed.
-          </p>
-        </div>
+    <div class="card" style="border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.05)">
+      <div class="section-title" style="color:#4ade80">⚡ Recommended: GROQ (100% Free, Best Quality)</div>
+      <div class="section-sub">Koi bhi length ka course (7 din se 365 din) — bina paisa, bina card, top quality</div>
+      <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:16px">
+        <p style="color:#4ade80;font-weight:700;font-size:14px;margin-bottom:8px">🚀 Groq Setup (Yahi use karo)</p>
+        <p style="color:rgba(255,255,255,0.75);font-size:12.5px;line-height:1.8">
+          <strong>Primary Model:</strong> 🌙 Kimi K2 (best open-source quality — Llama se behtar)<br>
+          <strong>Backup Models:</strong> Llama 3.3 70B → Qwen3 32B (auto-fallback)<br>
+          <strong>Limit:</strong> 30 req/min, <strong>14,400 req/DIN</strong>, ~140k tokens/min — 90-day course bhi minute me<br>
+          <strong>Cost:</strong> ₹0 — bilkul free, koi card nahi
+        </p>
       </div>
       <div style="margin-top:12px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px">
-        <p style="color:rgba(255,255,255,0.5);font-size:11.5px">⚠️ <strong style="color:rgba(255,255,255,0.7)">OpenRouter free DeepSeek avoid karo as primary</strong> — sirf 50 req/day limit hai, 90-day course me 2 din lagenge. Use as last fallback only.</p>
+        <p style="color:rgba(255,255,255,0.55);font-size:11.5px">💡 Bas Groq select karo, key daalo, Test karke Kimi K2 select karo aur Save kar do. System khud Kimi K2 → Llama 70B fallback sambhal lega. Baaki providers optional backup hain.</p>
       </div>
     </div>
 
@@ -128,7 +119,7 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
         <div class="provider-btn" id="btnGroq" onclick="selectAI('groq')">
           <div style="font-size:26px;margin-bottom:4px">🚀</div>
           <div style="font-weight:700;font-size:14px">Groq</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Llama, Qwen, Scout...</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Kimi K2, Llama 3.3 70B...</div>
           <span class="badge-free">FREE</span>
         </div>
         <div class="provider-btn" id="btnOpenai" onclick="selectAI('openai')">
@@ -210,7 +201,7 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
             <li><strong>"Create API Key"</strong> dabao → naam do → key copy karo (gsk_... se shuru hogi)</li>
             <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
           </ol>
-          <p class="g-note">💡 Free + bahut fast. Llama 3.3 70B free milta hai. Rate limit kam hai, isliye 2-3 keys daalo to aur better.</p>
+          <p class="g-note">💡 Free + sabse fast. Test ke baad <strong>Kimi K2 (moonshotai/kimi-k2-instruct)</strong> select karo — ye best quality deta hai. 14,400 req/din free, koi card nahi.</p>
         </div>
         <div class="key-group">
           <div class="key-item">
@@ -463,7 +454,7 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 </div>
 
 <script>
-var activeAI = 'gemini';
+var activeAI = 'groq';
 var PROVIDERS = ['gemini','groq','deepseek','openrouter','cerebras','openai','grok'];
 
 // ── Load Settings ────────────────────────────────
@@ -485,7 +476,7 @@ async function loadSettings() {
         if (!data.success || !data.settings) return;
         var s = data.settings;
 
-        activeAI = s['active_ai_provider'] || 'gemini';
+        activeAI = s['active_ai_provider'] || 'groq';
         selectAI(activeAI, false);
 
         PROVIDERS.forEach(function(p) {

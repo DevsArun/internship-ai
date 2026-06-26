@@ -63,7 +63,7 @@ var AI_SETTINGS = null;
 // Default model lists per provider (fallback if no saved model)
 var PROVIDER_MODELS = {
   gemini:     ['gemini-2.5-flash','gemini-2.0-flash','gemini-2.5-pro','gemini-2.0-flash-lite'],
-  groq:       ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','qwen/qwen3-32b','openai/gpt-oss-20b'],
+  groq:       ['moonshotai/kimi-k2-instruct','llama-3.3-70b-versatile','qwen/qwen3-32b','llama-3.1-8b-instant'],
   deepseek:   ['deepseek-chat','deepseek-reasoner'],
   openrouter: ['deepseek/deepseek-chat-v3-0324:free','meta-llama/llama-3.3-70b-instruct:free','qwen/qwen-2.5-72b-instruct:free','google/gemini-2.0-flash-exp:free','mistralai/mistral-small-3.1-24b-instruct:free'],
   cerebras:   ['llama-3.3-70b','qwen-3-32b','llama3.1-8b'],

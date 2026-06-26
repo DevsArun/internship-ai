@@ -190,11 +190,10 @@ const GEMINI_FALLBACKS = [
 
 // ── Groq fallback chain (removed deprecated models) ──
 const GROQ_FALLBACKS = [
+    'moonshotai/kimi-k2-instruct',
     'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
     'qwen/qwen3-32b',
-    'meta-llama/llama-4-scout',
-    'gemma2-9b-it'
+    'llama-3.1-8b-instant'
 ];
 
 const OPENAI_FALLBACKS = ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'];
