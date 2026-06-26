@@ -63,7 +63,7 @@ var AI_SETTINGS = null;
 // Default model lists per provider (fallback if no saved model)
 var PROVIDER_MODELS = {
   gemini:     ['gemini-2.5-flash','gemini-2.0-flash','gemini-2.5-pro','gemini-2.0-flash-lite'],
-  groq:       ['moonshotai/kimi-k2-instruct','llama-3.3-70b-versatile','qwen/qwen3-32b','llama-3.1-8b-instant'],
+  groq:       ['llama-3.3-70b-versatile','llama-3.1-8b-instant'],
   deepseek:   ['deepseek-chat','deepseek-reasoner'],
   openrouter: ['deepseek/deepseek-chat-v3-0324:free','meta-llama/llama-3.3-70b-instruct:free','qwen/qwen-2.5-72b-instruct:free','google/gemini-2.0-flash-exp:free','mistralai/mistral-small-3.1-24b-instruct:free'],
   cerebras:   ['llama-3.3-70b','qwen-3-32b','llama3.1-8b'],
@@ -74,7 +74,7 @@ var PROVIDER_MODELS = {
 // Max output tokens — 8000 gives room for a deep, premium 1500-2500 word lesson.
 // Smaller fallback models that can't handle this (HTTP 413) are auto-skipped,
 // so the big, capable models (llama-3.3-70b, gemini, deepseek, etc.) do the work.
-var MAX_OUTPUT_TOKENS = 8000;
+var MAX_OUTPUT_TOKENS = 4096;
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
@@ -299,63 +299,66 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
     ? buildQuizPrompt(topic, level, language, dayObj, weekTopics, weekNum)
     : buildContentPrompt(topic, level, language, dayObj, (meta.days || syllabus.length));
 
-  // Track per-provider rate limit cooldowns
-  var rateLimitUntil = {}; // provider -> timestamp when usable again
+  // Per-KEY rate-limit cooldowns: each API key has its OWN limit, so one key's
+  // 429 must NOT bench the other keys of the same provider. We cycle through
+  // all (key x model) combos of the current provider before moving on.
+  var rateLimitUntil = {}; // "provider|key" -> timestamp usable again
 
-  var MAX_CALLS  = 26;   // max REAL api calls (cooldown waits don't count)
-  var callCount  = 0;    // counts only actual API calls
-  var loopGuard  = 0;    // hard safety against infinite loops
+  var MAX_CALLS  = 30;
+  var callCount  = 0;
+  var loopGuard  = 0;
   var quizRetryCount = 0;
 
-  // Helper: live (non-dead) keys / models for a provider entry
   function liveKeysOf(c){   return c.keys.filter(function(k){ return c.deadKeys.indexOf(k) === -1; }); }
   function liveModelsOf(c){ return c.models.filter(function(m){ return c.deadModels.indexOf(m) === -1; }); }
+  function keyReady(prov, key){ return Date.now() >= (rateLimitUntil[prov + '|' + key] || 0); }
 
-  while(callCount < MAX_CALLS && loopGuard < 300){
+  while(callCount < MAX_CALLS && loopGuard < 400){
     loopGuard++;
 
-    // Find the best available provider right now (live key + live model + not cooling down)
-    var selectedProvider = null;
-    var selectedChain    = null;
-
+    // Pick first provider (priority order) that has a live model AND a live key
+    // whose own cooldown has expired. All 3 keys of Groq get used before we ever
+    // fall to the next provider.
+    var selectedProvider = null, apiKey = null;
     for(var ci = 0; ci < chain.length; ci++){
       var c = chain[ci];
-      if(liveKeysOf(c).length === 0)   continue; // all keys dead
-      if(liveModelsOf(c).length === 0) continue; // all models dead/unusable
-      if(Date.now() < (rateLimitUntil[c.provider] || 0)) continue; // cooling down
+      if(liveModelsOf(c).length === 0) continue;
+      var readyKey = liveKeysOf(c).filter(function(k){ return keyReady(c.provider, k); })[0];
+      if(!readyKey) continue;
       selectedProvider = c;
-      selectedChain    = ci;
+      apiKey = readyKey;
       break;
     }
 
-    // No provider ready — wait for the earliest cooldown (does NOT consume a call)
+    // Nothing ready — wait for the earliest key cooldown (does NOT consume a call)
     if(!selectedProvider){
       var earliest = Infinity;
       chain.forEach(function(c){
-        if(liveKeysOf(c).length > 0 && liveModelsOf(c).length > 0 && rateLimitUntil[c.provider]){
-          earliest = Math.min(earliest, rateLimitUntil[c.provider]);
-        }
+        if(liveModelsOf(c).length === 0) return;
+        liveKeysOf(c).forEach(function(k){
+          var t = rateLimitUntil[c.provider + '|' + k] || 0;
+          if(t > Date.now()) earliest = Math.min(earliest, t);
+        });
       });
       if(earliest === Infinity){
-        log('  ❌ All providers exhausted / no valid keys or models', 'err');
+        log('  \u274c All providers exhausted / no valid keys or models', 'err');
         return {success: false};
       }
       var waitMs = Math.max(0, earliest - Date.now()) + 1000;
-      log('  ⏳ All providers cooling down — wait ' + Math.ceil(waitMs/1000) + 's...', 'warn');
+      log('  \u23f3 All keys cooling down \u2014 wait ' + Math.ceil(waitMs/1000) + 's...', 'warn');
       await sleep(waitMs);
       continue;
     }
 
-    // Pick a live key + live model (rotate as real calls accumulate)
-    var liveKeys   = liveKeysOf(selectedProvider);
+    // Model: prefer the one that already worked for this provider, else best (first) live model
     var liveModels = liveModelsOf(selectedProvider);
-    var keyIdx     = callCount % liveKeys.length;
-    var modelIdx   = Math.floor(callCount / liveKeys.length) % liveModels.length;
-    var apiKey     = liveKeys[keyIdx];
-    var model      = liveModels[modelIdx];
+    var model = (selectedProvider._goodModel && liveModels.indexOf(selectedProvider._goodModel) !== -1)
+              ? selectedProvider._goodModel
+              : liveModels[0];
+    var keyNum = selectedProvider.keys.indexOf(apiKey) + 1;
 
     callCount++;
-    log('  Day ' + dayObj.day + ' | Try ' + callCount + ': [' + selectedProvider.provider.toUpperCase() + '] ' + model + ' (Key ' + (keyIdx+1) + '/' + liveKeys.length + ')', 'spin');
+    log('  Day ' + dayObj.day + ' | Try ' + callCount + ': [' + selectedProvider.provider.toUpperCase() + '] ' + model + ' (Key ' + keyNum + '/' + selectedProvider.keys.length + ')', 'spin');
 
     var res = await callAPI(selectedProvider.provider, apiKey, model, prompt);
 
@@ -400,13 +403,15 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
         parsed.quiz = [];
       }
 
+      // Remember the model+provider that just worked so we reuse it first next time
+      selectedProvider._goodModel = model;
       return {success: true, data: parsed};
     }
 
     // ─── Handle errors ───────────────────────────────────────────────────────
     if(res.code === 401){
       // Dead key — permanently remove
-      log('  ❌ Key ' + (keyIdx+1) + ' invalid (401) — permanently skip kiya', 'err');
+      log('  ❌ Key ' + (selectedProvider.keys.indexOf(apiKey)+1) + ' invalid (401) — permanently skip kiya', 'err');
       selectedProvider.deadKeys.push(apiKey);
       // Check if all keys dead for this provider
       var remainingKeys = selectedProvider.keys.filter(function(k){ return selectedProvider.deadKeys.indexOf(k) === -1; });
@@ -418,29 +423,13 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
     }
 
     if(res.code === 429){
-      // Rate limited — set cooldown for THIS provider and SWITCH to next
-      var cooldownMs = 60000; // 60 second default cooldown
-      rateLimitUntil[selectedProvider.provider] = Date.now() + cooldownMs;
+      // This KEY hit its per-minute limit \u2014 cool ONLY this key (60s), then
+      // immediately try the next key of the SAME provider if one is free.
+      rateLimitUntil[selectedProvider.provider + '|' + apiKey] = Date.now() + 60000;
       selectedProvider._hadRateLimit = true;
-      log('  ⚠️ ' + selectedProvider.provider.toUpperCase() + ' rate limited — 60s cooldown, switching provider...', 'warn');
-
-      // Try to find another provider immediately
-      var nextAvailable = null;
-      for(var ni = 0; ni < chain.length; ni++){
-        if(ni === selectedChain) continue;
-        var nc = chain[ni];
-        var nliveKeys = nc.keys.filter(function(k){ return nc.deadKeys.indexOf(k) === -1; });
-        if(nliveKeys.length === 0) continue;
-        var ncooldown = rateLimitUntil[nc.provider] || 0;
-        if(Date.now() >= ncooldown){ nextAvailable = nc; break; }
-      }
-
-      if(nextAvailable){
-        log('  🔄 Switched to: ' + nextAvailable.provider.toUpperCase(), 'spin');
-      } else {
-        log('  ⏳ No provider available — waiting...', 'warn');
-      }
-      await sleep(500);
+      var otherReady = liveKeysOf(selectedProvider).some(function(k){ return keyReady(selectedProvider.provider, k); });
+      log('  \u26a0\ufe0f ' + selectedProvider.provider.toUpperCase() + ' Key ' + (selectedProvider.keys.indexOf(apiKey)+1) + ' rate limited \u2014 ' + (otherReady ? 'next key...' : 'switching...'), 'warn');
+      await sleep(300);
       continue;
     }
 
@@ -449,6 +438,7 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
       // bad request). Add it to the skip-list so we never waste another call on it.
       log('  ⚠️ ' + model + ' unusable (' + res.code + ') — skipping this model', 'warn');
       if(selectedProvider.deadModels.indexOf(model) === -1) selectedProvider.deadModels.push(model);
+      if(selectedProvider._goodModel === model) selectedProvider._goodModel = null;
       var liveLeft = liveModelsOf(selectedProvider).length;
       if(liveLeft === 0){
         log('  🔴 ' + selectedProvider.provider.toUpperCase() + ' — no usable models left, provider skip', 'err');

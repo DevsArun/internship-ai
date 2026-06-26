@@ -94,14 +94,14 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
       <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:16px">
         <p style="color:#4ade80;font-weight:700;font-size:14px;margin-bottom:8px">🚀 Groq Setup (Yahi use karo)</p>
         <p style="color:rgba(255,255,255,0.75);font-size:12.5px;line-height:1.8">
-          <strong>Primary Model:</strong> 🌙 Kimi K2 (best open-source quality — Llama se behtar)<br>
-          <strong>Backup Models:</strong> Llama 3.3 70B → Qwen3 32B (auto-fallback)<br>
+          <strong>Primary Model:</strong> Llama 3.3 70B (best reliable model on Groq)<br>
+          <strong>Backup Model:</strong> Llama 3.1 8B Instant (auto-fallback)<br>
           <strong>Limit:</strong> 30 req/min, <strong>14,400 req/DIN</strong>, ~140k tokens/min — 90-day course bhi minute me<br>
           <strong>Cost:</strong> ₹0 — bilkul free, koi card nahi
         </p>
       </div>
       <div style="margin-top:12px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px">
-        <p style="color:rgba(255,255,255,0.55);font-size:11.5px">💡 Bas Groq select karo, key daalo, Test karke Kimi K2 select karo aur Save kar do. System khud Kimi K2 → Llama 70B fallback sambhal lega. Baaki providers optional backup hain.</p>
+        <p style="color:rgba(255,255,255,0.55);font-size:11.5px">💡 Bas Groq select karo, key daalo, Test karke Kimi K2 select karo aur Save kar do. System khud teeno keys ke beech ghoomega aur working model pin kar lega. Baaki providers optional backup hain.</p>
       </div>
     </div>
 
@@ -201,7 +201,7 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
             <li><strong>"Create API Key"</strong> dabao → naam do → key copy karo (gsk_... se shuru hogi)</li>
             <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
           </ol>
-          <p class="g-note">💡 Free + sabse fast. Test ke baad <strong>Kimi K2 (moonshotai/kimi-k2-instruct)</strong> select karo — ye best quality deta hai. 14,400 req/din free, koi card nahi.</p>
+          <p class="g-note">💡 Free + sabse fast. Test ke baad <strong>Llama 3.3 70B (llama-3.3-70b-versatile)</strong> select karo — best reliable quality. 14,400 req/din free, koi card nahi.</p>
         </div>
         <div class="key-group">
           <div class="key-item">

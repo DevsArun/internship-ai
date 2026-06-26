@@ -32,7 +32,7 @@ if ($apiKey === '' || $provider === '') {
 // Models to test per provider (kept in sync with building.php PROVIDER_MODELS)
 $MODELS = [
     'gemini'     => ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite'],
-    'groq'       => ['moonshotai/kimi-k2-instruct', 'llama-3.3-70b-versatile', 'qwen/qwen3-32b', 'llama-3.1-8b-instant'],
+    'groq'       => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
     'deepseek'   => ['deepseek-chat', 'deepseek-reasoner'],
     'openrouter' => ['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen-2.5-72b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'mistralai/mistral-small-3.1-24b-instruct:free'],
     'cerebras'   => ['llama-3.3-70b', 'qwen-3-32b', 'llama3.1-8b'],
