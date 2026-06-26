@@ -473,7 +473,7 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
 // ─── MAIN FLOW ────────────────────────────────────────────────────────────────
 async function loadSettings(){
   try {
-    var r = await fetch('../api/ai/get-settings.php');
+    var r = await fetch('api/ai/get-settings.php');
     var d = await r.json();
     if(d.success){ AI_SETTINGS = d.settings; return true; }
   } catch(e){ console.warn('Settings load error:', e); }

@@ -1,10 +1,9 @@
 <?php
 /**
- * AI Studio — get-settings.php
+ * AI Studio — get-settings.php  [repo-local, self-contained]
  *
- * Deploy to: {webroot}/api/ai/get-settings.php
- * building.php fetches this to load all saved provider keys/models.
- * Returns every row generically, so new providers work automatically.
+ * Served at {app}/api/ai/get-settings.php; building.php / generate.php fetch it
+ * via "api/ai/get-settings.php" to load all saved provider keys/models.
  */
 session_name('ai_studio_session');
 session_start();

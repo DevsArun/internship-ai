@@ -399,7 +399,7 @@ var PROVIDERS = ['gemini','groq','openrouter','cerebras','openai','grok'];
 // ── Load Settings ────────────────────────────────
 async function loadSettings() {
     try {
-        var r       = await fetch('../api/ai/settings.php?action=get');
+        var r       = await fetch('api/ai/settings.php?action=get');
         var rawText = await r.text(); // ✅ pehle text lo
         console.log('[LOAD] raw:', rawText.substring(0, 200));
 
@@ -480,7 +480,7 @@ async function testModels(provider) {
     list.innerHTML = '<p style="color:rgba(255,255,255,0.4);font-size:13px;padding:8px 0">🔄 Testing all models...</p>';
 
     try {
-        var r       = await fetch('../api/ai/test-models.php', {
+        var r       = await fetch('api/ai/test-models.php', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ api_key: keyEl.value.trim(), provider: provider })
@@ -545,7 +545,7 @@ async function saveSettings() {
     document.getElementById('saveStatus').textContent = 'Saving...';
 
     try {
-        var r = await fetch('../api/ai/settings.php?action=save', {
+        var r = await fetch('api/ai/settings.php?action=save', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify(payload)

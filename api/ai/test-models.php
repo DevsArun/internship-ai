@@ -1,11 +1,11 @@
 <?php
 /**
- * AI Studio — test-models.php
+ * AI Studio — test-models.php  [repo-local, self-contained]
  *
- * Deploy to: {webroot}/api/ai/test-models.php
- *
- * Tests an API key against each of a provider's models and reports which ones
- * work. Supports ALL providers including the new free ones (openrouter, cerebras).
+ * Served at {app}/api/ai/test-models.php; settings.php calls it via
+ * "api/ai/test-models.php". Tests an API key against each of a provider's
+ * models and reports which ones work. Supports ALL providers including the
+ * new free ones (openrouter, cerebras).
  *
  * Request  (POST JSON): { "api_key": "...", "provider": "gemini|groq|openrouter|cerebras|openai|grok" }
  * Response (JSON):      { "success": true, "results": [ {model, working, status, message, latency_ms} ], "best_model": "..." }

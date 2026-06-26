@@ -203,7 +203,7 @@ const GROK_FALLBACKS   = ['grok-3-fast','grok-3','grok-2-1212'];
 // ── Load settings on page load ─────────────────────
 async function loadSettings() {
     try {
-        var r       = await fetch('../api/ai/get-settings.php');
+        var r       = await fetch('api/ai/get-settings.php');
         var rawText = await r.text();
         var data    = JSON.parse(rawText);
         if (data.success && data.settings) {
@@ -454,7 +454,7 @@ async function startGenerate() {
     // Settings reload karo agar nahi hai
     if (!AI_SETTINGS) {
         try {
-            var r       = await fetch('../api/ai/get-settings.php');
+            var r       = await fetch('api/ai/get-settings.php');
             var rawText = await r.text();
             var d       = JSON.parse(rawText);
             if (!d.success || !d.settings) { showErr('Settings load nahi hui — page refresh karo.'); return; }

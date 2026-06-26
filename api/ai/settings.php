@@ -1,12 +1,12 @@
 <?php
 /**
- * AI Studio — Settings API (get + save)
+ * AI Studio — Settings API (get + save)  [repo-local, self-contained]
  *
- * Deploy this file to your server at:  {webroot}/api/ai/settings.php
- * (i.e. the SIBLING "api" folder used by building.php via ../api/ai/settings.php)
+ * Served in-place at {app}/api/ai/settings.php and called by settings.php
+ * via the relative path "api/ai/settings.php". No external folder needed.
  *
- * This version adds the new FREE providers (openrouter, cerebras) to the
- * save whitelist so their API keys + chosen model actually persist.
+ * Includes the new FREE providers (openrouter, cerebras) in the save
+ * whitelist so their API keys + chosen model actually persist.
  */
 session_name('ai_studio_session');
 session_start();
