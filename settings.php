@@ -42,6 +42,13 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 .key-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px 14px; }
 .model-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); border-radius: 6px; }
 .model-row:last-child { border-bottom: none; }
+.guide { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.25); border-radius: 10px; padding: 13px 15px; margin-bottom: 16px; }
+.guide .g-title { color: #93c5fd; font-size: 13px; font-weight: 700; margin-bottom: 7px; display: flex; align-items: center; gap: 6px; }
+.guide ol { margin: 0 0 0 18px; padding: 0; }
+.guide li { color: rgba(255,255,255,0.65); font-size: 12.5px; line-height: 1.7; margin-bottom: 2px; }
+.guide a { color: #60a5fa; font-weight: 600; text-decoration: none; }
+.guide a:hover { text-decoration: underline; }
+.guide .g-note { color: rgba(255,255,255,0.4); font-size: 11.5px; margin-top: 7px; }
 #toast { display: none; position: fixed; top: 24px; right: 24px; padding: 13px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
 </style>
 </head>
@@ -125,6 +132,16 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
       <!-- GEMINI -->
       <div id="geminiSection">
+        <div class="guide">
+          <div class="g-title">📘 Gemini API key kaise laaye? <span style="color:#4ade80;font-size:11px">(FREE)</span></div>
+          <ol>
+            <li>Khol <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></li>
+            <li>Apne <strong>Google account</strong> se login karo</li>
+            <li><strong>"Create API key"</strong> button dabao → key copy karo (AIzaSy... se shuru hogi)</li>
+            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
+          </ol>
+          <p class="g-note">💡 Bilkul free hai, credit card nahi chahiye. Recommended for beginners.</p>
+        </div>
         <div class="key-group">
           <div class="key-item">
             <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
@@ -152,6 +169,16 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
       <!-- GROQ -->
       <div id="groqSection" style="display:none">
+        <div class="guide">
+          <div class="g-title">📗 Groq API key kaise laaye? <span style="color:#4ade80;font-size:11px">(FREE)</span></div>
+          <ol>
+            <li>Khol <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a></li>
+            <li><strong>Sign up</strong> karo (Google/GitHub se ek click me)</li>
+            <li><strong>"Create API Key"</strong> dabao → naam do → key copy karo (gsk_... se shuru hogi)</li>
+            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
+          </ol>
+          <p class="g-note">💡 Free + bahut fast. Llama 3.3 70B free milta hai. Rate limit kam hai, isliye 2-3 keys daalo to aur better.</p>
+        </div>
         <div class="key-group">
           <div class="key-item">
             <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://console.groq.com" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
@@ -179,6 +206,17 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
       <!-- OPENAI -->
       <div id="openaiSection" style="display:none">
+        <div class="guide">
+          <div class="g-title">📙 OpenAI API key kaise laaye? <span style="color:#f87171;font-size:11px">(PAID)</span></div>
+          <ol>
+            <li>Khol <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a></li>
+            <li><strong>Sign up / login</strong> karo</li>
+            <li><strong>Billing</strong> me thoda balance add karo (paid hai — free credit khatam ho jaata hai)</li>
+            <li><strong>"Create new secret key"</strong> → key copy karo (sk-... se shuru hogi)</li>
+            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
+          </ol>
+          <p class="g-note">⚠️ Paid hai — har request ka paisa lagta hai. Sirf tab use karo jab budget ho.</p>
+        </div>
         <div class="key-group">
           <div class="key-item">
             <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://platform.openai.com/api-keys" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Key lao →</a></label>
@@ -206,6 +244,17 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
       <!-- GROK -->
       <div id="grokSection" style="display:none">
+        <div class="guide">
+          <div class="g-title">⚡ xAI Grok API key kaise laaye? <span style="color:#f87171;font-size:11px">(PAID)</span></div>
+          <ol>
+            <li>Khol <a href="https://console.x.ai" target="_blank">console.x.ai</a></li>
+            <li><strong>Sign up / login</strong> karo (X / Twitter account se)</li>
+            <li><strong>Billing</strong> setup karo (paid hai)</li>
+            <li><strong>API Keys</strong> → <strong>"Create API Key"</strong> → copy karo (xai-... se shuru hogi)</li>
+            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
+          </ol>
+          <p class="g-note">⚠️ Paid hai. Powerful hai par paisa lagta hai.</p>
+        </div>
         <div class="key-group">
           <div class="key-item">
             <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://console.x.ai" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Key lao →</a></label>
@@ -233,6 +282,16 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
       <!-- OPENROUTER -->
       <div id="openrouterSection" style="display:none">
+        <div class="guide">
+          <div class="g-title">🌐 OpenRouter API key kaise laaye? <span style="color:#4ade80;font-size:11px">(FREE)</span></div>
+          <ol>
+            <li>Khol <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></li>
+            <li><strong>Sign up</strong> karo (Google/GitHub se ek click)</li>
+            <li><strong>"Create Key"</strong> dabao → naam do → key copy karo (sk-or-... se shuru hogi)</li>
+            <li>Yahan <strong>API Key 1</strong> me paste karo → Save</li>
+          </ol>
+          <p class="g-note">💡 Ek hi key se DeepSeek V3, Llama 3.3 70B, Qwen 72B jaise top models FREE me (model name me ":free" lagta hai). Best fallback option.</p>
+        </div>
         <div class="key-group">
           <div class="key-item">
             <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://openrouter.ai/keys" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
@@ -260,6 +319,16 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
       <!-- CEREBRAS -->
       <div id="cerebrasSection" style="display:none">
+        <div class="guide">
+          <div class="g-title">🧠 Cerebras API key kaise laaye? <span style="color:#4ade80;font-size:11px">(FREE)</span></div>
+          <ol>
+            <li>Khol <a href="https://cloud.cerebras.ai" target="_blank">cloud.cerebras.ai</a></li>
+            <li><strong>Sign up / login</strong> karo (Google se ek click)</li>
+            <li>Left menu me <strong>"API Keys"</strong> → <strong>"Generate API Key"</strong> → copy karo (csk-... se shuru hogi)</li>
+            <li>Yahan <strong>API Key 1</strong> me paste karo → Save</li>
+          </ol>
+          <p class="g-note">💡 Free + duniya ka sabse fast inference. Llama 3.3 70B turant generate karta hai.</p>
+        </div>
         <div class="key-group">
           <div class="key-item">
             <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://cloud.cerebras.ai" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
