@@ -5,8 +5,7 @@
  * Served in-place at {app}/api/ai/settings.php and called by settings.php
  * via the relative path "api/ai/settings.php". No external folder needed.
  *
- * Includes the new FREE providers (openrouter, cerebras) in the save
- * whitelist so their API keys + chosen model actually persist.
+ * Supports deepseek (primary) and groq (backup) in the save whitelist.
  */
 session_name('ai_studio_session');
 session_start();
@@ -74,7 +73,7 @@ if ($action === 'save') {
 
     // Whitelist of settings we accept. Each provider has 3 key slots + 1 model.
     $allowed = ['active_ai_provider'];
-    foreach (['gemini', 'groq', 'deepseek', 'openrouter', 'cerebras', 'openai', 'grok'] as $p) {
+    foreach (['deepseek', 'groq'] as $p) {
         $allowed[] = $p . '_api_key';
         $allowed[] = $p . '_api_key_2';
         $allowed[] = $p . '_api_key_3';

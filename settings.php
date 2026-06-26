@@ -88,29 +88,18 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
     </div>
 
     <!-- PROVIDER RECOMMENDATION -->
-    <div class="card" style="border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.04)">
-      <div class="section-title" style="color:#fbbf24">⚡ Recommended Setup (Sabse Best)</div>
-      <div class="section-sub">Kisi bhi length ka course (7 din se 365 din tak) seamlessly generate karne ke liye</div>
+    <div class="card" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)">
+      <div class="section-title" style="color:#93c5fd">⚡ Provider Setup</div>
+      <div class="section-sub">DeepSeek PRIMARY + Groq BACKUP — best combo for any length course</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:14px">
-          <p style="color:#4ade80;font-weight:700;font-size:13px;margin-bottom:6px">🥇 Best Quality Setup</p>
-          <p style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.7">
-            <strong>Primary:</strong> 🐳 DeepSeek (deepseek-chat)<br>
-            <strong>Fallback:</strong> ✨ Gemini 2.0 Flash<br>
-            <strong>Why:</strong> DeepSeek V3 = best content quality. Free trial phir ~₹15-25 per 90-day course. Gemini backup me high limit (1500 req/day).
-          </p>
+          <p style="color:#4ade80;font-weight:700;font-size:13px;margin-bottom:6px">🐳 DeepSeek — Primary</p>
+          <p style="color:rgba(255,255,255,0.65);font-size:12px;line-height:1.7">Best content quality. No hard rate limit. Free trial credit (~18 courses), phir sirf ₹6-7 per 90-day course.</p>
         </div>
-        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:12px;padding:14px">
-          <p style="color:#93c5fd;font-weight:700;font-size:13px;margin-bottom:6px">🆓 100% Free Setup</p>
-          <p style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.7">
-            <strong>Primary:</strong> ✨ Gemini 2.0 Flash<br>
-            <strong>Fallback:</strong> 🚀 Groq (Llama 3.3 70B)<br>
-            <strong>Why:</strong> Gemini = 1500 req/day free, koi bhi course ek din me complete. No card needed.
-          </p>
+        <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:14px">
+          <p style="color:#fbbf24;font-weight:700;font-size:13px;margin-bottom:6px">🚀 Groq — Auto Backup</p>
+          <p style="color:rgba(255,255,255,0.65);font-size:12px;line-height:1.7">100% free, fast. Automatic fallback jab DeepSeek rate-limit kare. Key daal do, baki system sambhal lega.</p>
         </div>
-      </div>
-      <div style="margin-top:12px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px">
-        <p style="color:rgba(255,255,255,0.5);font-size:11.5px">⚠️ <strong style="color:rgba(255,255,255,0.7)">OpenRouter free DeepSeek avoid karo as primary</strong> — sirf 50 req/day limit hai, 90-day course me 2 din lagenge. Use as last fallback only.</p>
       </div>
     </div>
 
@@ -119,68 +108,22 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
       <div class="section-title">🤖 AI Provider</div>
       <div class="section-sub">Kaunse AI se course content generate hoga</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
-        <div class="provider-btn active" id="btnGemini" onclick="selectAI('gemini')">
-          <div style="font-size:26px;margin-bottom:4px">✨</div>
-          <div style="font-weight:700;font-size:14px">Google Gemini</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">2.5 Flash, 2.0 Flash...</div>
-          <span class="badge-free">FREE</span>
+        <div class="provider-btn active" id="btnDeepseek" onclick="selectAI('deepseek')">
+          <div style="font-size:26px;margin-bottom:4px">🐳</div>
+          <div style="font-weight:700;font-size:14px">DeepSeek</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">V4 Flash — Best quality</div>
+          <span class="badge-opt" style="margin-left:0">FREE TRIAL + SASTA</span>
         </div>
         <div class="provider-btn" id="btnGroq" onclick="selectAI('groq')">
           <div style="font-size:26px;margin-bottom:4px">🚀</div>
           <div style="font-weight:700;font-size:14px">Groq</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Llama, Qwen, Scout...</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Llama 3.3 70B — Free backup</div>
           <span class="badge-free">FREE</span>
-        </div>
-        <div class="provider-btn" id="btnOpenai" onclick="selectAI('openai')">
-          <div style="font-size:26px;margin-bottom:4px">🤖</div>
-          <div style="font-weight:700;font-size:14px">OpenAI</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">GPT-4o, GPT-4-turbo...</div>
-          <span class="badge-paid">PAID</span>
-        </div>
-        <div class="provider-btn" id="btnGrok" onclick="selectAI('grok')">
-          <div style="font-size:26px;margin-bottom:4px">⚡</div>
-          <div style="font-weight:700;font-size:14px">xAI Grok</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Grok-3, Grok-4...</div>
-          <span class="badge-paid">PAID</span>
-        </div>
-        <div class="provider-btn" id="btnOpenrouter" onclick="selectAI('openrouter')">
-          <div style="font-size:26px;margin-bottom:4px">🌐</div>
-          <div style="font-weight:700;font-size:14px">OpenRouter</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">DeepSeek V3, Llama 3.3 70B...</div>
-          <span class="badge-free">FREE</span>
-        </div>
-        <div class="provider-btn" id="btnCerebras" onclick="selectAI('cerebras')">
-          <div style="font-size:26px;margin-bottom:4px">🧠</div>
-          <div style="font-weight:700;font-size:14px">Cerebras</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Llama 3.3 70B (ultra-fast)...</div>
-          <span class="badge-free">FREE</span>
-        </div>
-        <div class="provider-btn" id="btnDeepseek" onclick="selectAI('deepseek')">
-          <div style="font-size:26px;margin-bottom:4px">🐳</div>
-          <div style="font-weight:700;font-size:14px">DeepSeek</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">V3 / R1 — top quality...</div>
-          <span class="badge-opt" style="margin-left:0">FREE TRIAL + SASTA</span>
         </div>
       </div>
 
-      <!-- GEMINI -->
-      <div id="geminiSection">
-        <div class="guide">
-          <div class="g-title">📘 Gemini API key kaise laaye? <span style="color:#4ade80;font-size:11px">(FREE)</span></div>
-          <ol>
-            <li>Khol <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></li>
-            <li>Apne <strong>Google account</strong> se login karo</li>
-            <li><strong>"Create API key"</strong> button dabao → key copy karo (AIzaSy... se shuru hogi)</li>
-            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
-          </ol>
-          <p class="g-note">💡 Bilkul free hai, credit card nahi chahiye. Recommended for beginners.</p>
-        </div>
-        <div class="key-group">
-          <div class="key-item">
-            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
-            <div style="position:relative"><input type="password" id="geminiKey" class="input-f" placeholder="AIzaSy..."><button type="button" onclick="tv('geminiKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
+      <!-- DEEPSEEK -->
+                <div class="key-item">
             <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
             <div style="position:relative"><input type="password" id="geminiKey2" class="input-f" placeholder="AIzaSy..."><button type="button" onclick="tv('geminiKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
           </div>
@@ -233,156 +176,6 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
           <div id="groqBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
             <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
             <select id="groqSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
-          </div>
-        </div>
-      </div>
-
-      <!-- OPENAI -->
-      <div id="openaiSection" style="display:none">
-        <div class="guide">
-          <div class="g-title">📙 OpenAI API key kaise laaye? <span style="color:#f87171;font-size:11px">(PAID)</span></div>
-          <ol>
-            <li>Khol <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a></li>
-            <li><strong>Sign up / login</strong> karo</li>
-            <li><strong>Billing</strong> me thoda balance add karo (paid hai — free credit khatam ho jaata hai)</li>
-            <li><strong>"Create new secret key"</strong> → key copy karo (sk-... se shuru hogi)</li>
-            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
-          </ol>
-          <p class="g-note">⚠️ Paid hai — har request ka paisa lagta hai. Sirf tab use karo jab budget ho.</p>
-        </div>
-        <div class="key-group">
-          <div class="key-item">
-            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://platform.openai.com/api-keys" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Key lao →</a></label>
-            <div style="position:relative"><input type="password" id="openaiKey" class="input-f" placeholder="sk-..."><button type="button" onclick="tv('openaiKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="openaiKey2" class="input-f" placeholder="sk-..."><button type="button" onclick="tv('openaiKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 3 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="openaiKey3" class="input-f" placeholder="sk-..."><button type="button" onclick="tv('openaiKey3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-        </div>
-        <button class="btn-test" id="testOpenaiBtn" onclick="testModels('openai')">🔍 Test Keys & Auto-Select Best Model</button>
-        <div id="openaiTestResults" style="display:none;margin-top:14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px">
-          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px">MODEL TEST RESULTS — OPENAI</p>
-          <div id="openaiModelList"></div>
-          <div id="openaiBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
-            <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
-            <select id="openaiSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
-          </div>
-        </div>
-      </div>
-
-      <!-- GROK -->
-      <div id="grokSection" style="display:none">
-        <div class="guide">
-          <div class="g-title">⚡ xAI Grok API key kaise laaye? <span style="color:#f87171;font-size:11px">(PAID)</span></div>
-          <ol>
-            <li>Khol <a href="https://console.x.ai" target="_blank">console.x.ai</a></li>
-            <li><strong>Sign up / login</strong> karo (X / Twitter account se)</li>
-            <li><strong>Billing</strong> setup karo (paid hai)</li>
-            <li><strong>API Keys</strong> → <strong>"Create API Key"</strong> → copy karo (xai-... se shuru hogi)</li>
-            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
-          </ol>
-          <p class="g-note">⚠️ Paid hai. Powerful hai par paisa lagta hai.</p>
-        </div>
-        <div class="key-group">
-          <div class="key-item">
-            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://console.x.ai" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Key lao →</a></label>
-            <div style="position:relative"><input type="password" id="grokKey" class="input-f" placeholder="xai-..."><button type="button" onclick="tv('grokKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="grokKey2" class="input-f" placeholder="xai-..."><button type="button" onclick="tv('grokKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 3 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="grokKey3" class="input-f" placeholder="xai-..."><button type="button" onclick="tv('grokKey3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-        </div>
-        <button class="btn-test" id="testGrokBtn" onclick="testModels('grok')">🔍 Test Keys & Auto-Select Best Model</button>
-        <div id="grokTestResults" style="display:none;margin-top:14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px">
-          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px">MODEL TEST RESULTS — XAI GROK</p>
-          <div id="grokModelList"></div>
-          <div id="grokBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
-            <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
-            <select id="grokSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
-          </div>
-        </div>
-      </div>
-
-      <!-- OPENROUTER -->
-      <div id="openrouterSection" style="display:none">
-        <div class="guide">
-          <div class="g-title">🌐 OpenRouter API key kaise laaye? <span style="color:#4ade80;font-size:11px">(FREE)</span></div>
-          <ol>
-            <li>Khol <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></li>
-            <li><strong>Sign up</strong> karo (Google/GitHub se ek click)</li>
-            <li><strong>"Create Key"</strong> dabao → naam do → key copy karo (sk-or-... se shuru hogi)</li>
-            <li>Yahan <strong>API Key 1</strong> me paste karo → Save</li>
-          </ol>
-          <p class="g-note">💡 Ek hi key se DeepSeek V3, Llama 3.3 70B, Qwen 72B jaise top models FREE me (model name me ":free" lagta hai). Best fallback option.</p>
-        </div>
-        <div class="key-group">
-          <div class="key-item">
-            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://openrouter.ai/keys" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
-            <div style="position:relative"><input type="password" id="openrouterKey" class="input-f" placeholder="sk-or-..."><button type="button" onclick="tv('openrouterKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="openrouterKey2" class="input-f" placeholder="sk-or-..."><button type="button" onclick="tv('openrouterKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 3 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="openrouterKey3" class="input-f" placeholder="sk-or-..."><button type="button" onclick="tv('openrouterKey3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-        </div>
-        <button class="btn-test" id="testOpenrouterBtn" onclick="testModels('openrouter')">🔍 Test Keys & Auto-Select Best Model</button>
-        <div id="openrouterTestResults" style="display:none;margin-top:14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px">
-          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px">MODEL TEST RESULTS — OPENROUTER</p>
-          <div id="openrouterModelList"></div>
-          <div id="openrouterBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
-            <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
-            <select id="openrouterSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
-          </div>
-        </div>
-      </div>
-
-      <!-- CEREBRAS -->
-      <div id="cerebrasSection" style="display:none">
-        <div class="guide">
-          <div class="g-title">🧠 Cerebras API key kaise laaye? <span style="color:#4ade80;font-size:11px">(FREE)</span></div>
-          <ol>
-            <li>Khol <a href="https://cloud.cerebras.ai" target="_blank">cloud.cerebras.ai</a></li>
-            <li><strong>Sign up / login</strong> karo (Google se ek click)</li>
-            <li>Left menu me <strong>"API Keys"</strong> → <strong>"Generate API Key"</strong> → copy karo (csk-... se shuru hogi)</li>
-            <li>Yahan <strong>API Key 1</strong> me paste karo → Save</li>
-          </ol>
-          <p class="g-note">💡 Free + duniya ka sabse fast inference. Llama 3.3 70B turant generate karta hai.</p>
-        </div>
-        <div class="key-group">
-          <div class="key-item">
-            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://cloud.cerebras.ai" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Free key lao →</a></label>
-            <div style="position:relative"><input type="password" id="cerebrasKey" class="input-f" placeholder="csk-..."><button type="button" onclick="tv('cerebrasKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="cerebrasKey2" class="input-f" placeholder="csk-..."><button type="button" onclick="tv('cerebrasKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-          <div class="key-item">
-            <label>🔑 API Key 3 <span class="badge-opt">OPTIONAL</span></label>
-            <div style="position:relative"><input type="password" id="cerebrasKey3" class="input-f" placeholder="csk-..."><button type="button" onclick="tv('cerebrasKey3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
-          </div>
-        </div>
-        <button class="btn-test" id="testCerebrasBtn" onclick="testModels('cerebras')">🔍 Test Keys & Auto-Select Best Model</button>
-        <div id="cerebrasTestResults" style="display:none;margin-top:14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px">
-          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px">MODEL TEST RESULTS — CEREBRAS</p>
-          <div id="cerebrasModelList"></div>
-          <div id="cerebrasBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
-            <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
-            <select id="cerebrasSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
           </div>
         </div>
       </div>
@@ -463,8 +256,8 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 </div>
 
 <script>
-var activeAI = 'gemini';
-var PROVIDERS = ['gemini','groq','deepseek','openrouter','cerebras','openai','grok'];
+var activeAI = 'deepseek';
+var PROVIDERS = ['deepseek','groq'];
 
 // ── Load Settings ────────────────────────────────
 async function loadSettings() {
@@ -485,7 +278,7 @@ async function loadSettings() {
         if (!data.success || !data.settings) return;
         var s = data.settings;
 
-        activeAI = s['active_ai_provider'] || 'gemini';
+        activeAI = s['active_ai_provider'] || 'deepseek';
         selectAI(activeAI, false);
 
         PROVIDERS.forEach(function(p) {
