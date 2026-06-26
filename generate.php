@@ -178,20 +178,55 @@ label { color: rgba(255,255,255,0.6); font-size: 13px; display: block; margin-bo
 </div>
 
 <script>
-// ─── STATE ────────────────────────────────────────────────────────────────────
 let selectedType = 'course';
 let includeQuiz  = true;
 let AI_SETTINGS  = null;
 
-// ─── PROVIDER CONFIG ──────────────────────────────────────────────────────────
-// DeepSeek PRIMARY — best content quality, no hard rate limit
-// Groq    BACKUP   — free, fast, auto-fallback when DeepSeek rate-limits
-var PROVIDER_MODELS = {
-  deepseek: ['deepseek-v4-flash','deepseek-chat','deepseek-v4-pro'],
-  groq:     ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it']
-};
+// ── Gemini fallback chain ──────────────────────────
+const GEMINI_FALLBACKS = [
+    'gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash',
+    'gemini-1.5-flash-8b','gemini-1.5-pro','gemini-2.0-flash-lite'
+];
 
-// ─── UTILS ───────────────────────────────────────────────────────────────────
+// ── Groq fallback chain (removed deprecated models) ──
+const GROQ_FALLBACKS = [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'qwen/qwen3-32b',
+    'meta-llama/llama-4-scout',
+    'gemma2-9b-it'
+];
+
+const OPENAI_FALLBACKS = ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'];
+const GROK_FALLBACKS   = ['grok-3-fast','grok-3','grok-2-1212'];
+
+// ── Load settings on page load ─────────────────────
+async function loadSettings() {
+    try {
+        var r       = await fetch('api/ai/get-settings.php');
+        var rawText = await r.text();
+        var data    = JSON.parse(rawText);
+        if (data.success && data.settings) {
+            AI_SETTINGS = data.settings;
+            console.log('[INIT] Settings loaded. Provider:', AI_SETTINGS.active_ai_provider);
+        } else {
+            console.warn('[INIT] Settings load failed:', data.message);
+        }
+    } catch(e) {
+        console.warn('[INIT] get-settings.php error:', e.message);
+    }
+}
+loadSettings();
+
+function selectType(t) {
+    selectedType = t;
+    document.getElementById('typeCourse').className     = 'type-card' + (t==='course'     ? ' selected' : '');
+    document.getElementById('typeInternship').className = 'type-card' + (t==='internship' ? ' selected' : '');
+}
+function toggleQuiz() {
+    includeQuiz = !includeQuiz;
+    document.getElementById('quizToggle').className = 'toggle' + (includeQuiz ? ' on' : '');
+}
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function log(msg, cls) {
     cls = cls || 'log-info';
@@ -217,193 +252,197 @@ function resetBtn() {
     var btn = document.getElementById('genBtn');
     btn.disabled = false; btn.textContent = '🚀 Generate Course with AI';
 }
-function selectType(t) {
-    selectedType = t;
-    document.getElementById('typeCourse').className     = 'type-card' + (t==='course'     ? ' selected' : '');
-    document.getElementById('typeInternship').className = 'type-card' + (t==='internship' ? ' selected' : '');
-}
-function toggleQuiz() {
-    includeQuiz = !includeQuiz;
-    document.getElementById('quizToggle').className = 'toggle' + (includeQuiz ? ' on' : '');
-}
 
-// ─── SETTINGS LOADER ─────────────────────────────────────────────────────────
-async function loadSettings() {
-    try {
-        var r    = await fetch('api/ai/get-settings.php');
-        var data = await r.json();
-        if (data.success && data.settings) {
-            AI_SETTINGS = data.settings;
-        }
-    } catch(e) { console.warn('[INIT] get-settings error:', e.message); }
-}
-loadSettings();
+// ── Build model list (saved first, then fallbacks) ──
+function buildModels(provider, savedModel) {
+    var fallbacks = {
+        gemini: GEMINI_FALLBACKS,
+        groq:   GROQ_FALLBACKS,
+        openai: OPENAI_FALLBACKS,
+        grok:   GROK_FALLBACKS
+    }[provider] || GEMINI_FALLBACKS;
 
-// ─── BUILD PROVIDER CHAIN ────────────────────────────────────────────────────
-// Always: DeepSeek first, Groq second (if keys are configured)
-function buildProviderChain(settings) {
-    var chain = [];
-    ['deepseek','groq'].forEach(function(p) {
-        var keys = [
-            (settings[p+'_api_key']   || '').trim(),
-            (settings[p+'_api_key_2'] || '').trim(),
-            (settings[p+'_api_key_3'] || '').trim()
-        ].filter(function(k){ return k.length > 0; });
-        if (!keys.length) return;
-
-        var savedModel = (settings[p+'_model'] || '').trim();
-        var models = savedModel ? [savedModel] : [];
-        (PROVIDER_MODELS[p] || []).forEach(function(m){
-            if (models.indexOf(m) === -1) models.push(m);
-        });
-        chain.push({ provider: p, keys: keys, models: models });
-    });
-    return chain;
+    var list = [];
+    if (savedModel && savedModel.trim()) list.push(savedModel.trim());
+    fallbacks.forEach(function(m) { if (list.indexOf(m) === -1) list.push(m); });
+    return list;
 }
 
-// ─── API CALLER ───────────────────────────────────────────────────────────────
-function callAPI(provider, apiKey, model, prompt) {
-    var urls = {
-        deepseek: 'https://api.deepseek.com/v1/chat/completions',
-        groq:     'https://api.groq.com/openai/v1/chat/completions'
+// ── Build API keys list ────────────────────────────
+function buildKeys(provider, s) {
+    var keyMap = {
+        gemini: [s.gemini_api_key||'', s.gemini_api_key_2||'', s.gemini_api_key_3||''],
+        groq:   [s.groq_api_key||'',   s.groq_api_key_2||'',   s.groq_api_key_3||''],
+        openai: [s.openai_api_key||'',  s.openai_api_key_2||'', s.openai_api_key_3||''],
+        grok:   [s.grok_api_key||'',   s.grok_api_key_2||'',   s.grok_api_key_3||'']
     };
-    var ctrl  = new AbortController();
-    var timer = setTimeout(function(){ ctrl.abort(); }, 50000);
-    return fetch(urls[provider], {
-        method:  'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body:    JSON.stringify({model:model, messages:[{role:'user',content:prompt}], max_tokens:4096, temperature:0.5}),
-        signal:  ctrl.signal
-    }).then(function(res){
+    return (keyMap[provider] || []).filter(function(k) { return k.trim(); });
+}
+
+// ── Gemini API call ────────────────────────────────
+async function callGemini(apiKey, model, prompt) {
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, 50000);
+    try {
+        var res = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:6000}}),
+              signal: controller.signal }
+        );
         clearTimeout(timer);
         if (res.status===429) return {ok:false,code:429,msg:'RATE_LIMIT'};
-        if (res.status===401) return {ok:false,code:401,msg:'INVALID_KEY'};
-        if (res.status===404) return {ok:false,code:404,msg:'MODEL_NOT_FOUND'};
-        if (!res.ok)          return {ok:false,code:res.status,msg:'HTTP_'+res.status};
-        return res.json().then(function(j){
-            var text = '';
-            try { text = j.choices[0].message.content; } catch(e) {}
-            return text.trim() ? {ok:true,text:text} : {ok:false,code:0,msg:'EMPTY'};
-        });
-    }).catch(function(e){
+        if (res.status===503) return {ok:false,code:503,msg:'MODEL_OVERLOADED'};
+        if (!res.ok) return {ok:false,code:res.status,msg:'HTTP_'+res.status};
+        var json = await res.json();
+        var text = (json&&json.candidates&&json.candidates[0]&&json.candidates[0].content&&json.candidates[0].content.parts&&json.candidates[0].content.parts[0]&&json.candidates[0].content.parts[0].text) || '';
+        if (!text.trim()) return {ok:false,code:0,msg:'EMPTY_RESPONSE'};
+        return {ok:true,text:text};
+    } catch(e) {
         clearTimeout(timer);
-        return {ok:false,code:408,msg:e.name==='AbortError'?'TIMEOUT':e.message};
-    });
+        if (e.name==='AbortError') return {ok:false,code:408,msg:'TIMEOUT'};
+        return {ok:false,code:0,msg:e.message};
+    }
 }
 
-// ─── JSON PARSER ─────────────────────────────────────────────────────────────
+// ── Groq / OpenAI / Grok API call ─────────────────
+async function callOpenAIFormat(provider, apiKey, model, prompt) {
+    var urls = {
+        groq:   'https://api.groq.com/openai/v1/chat/completions',
+        openai: 'https://api.openai.com/v1/chat/completions',
+        grok:   'https://api.x.ai/v1/chat/completions'
+    };
+    var url = urls[provider];
+    if (!url) return {ok:false,code:0,msg:'Unknown provider: '+provider};
+
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, 50000);
+    try {
+        var res = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+            body: JSON.stringify({model:model,messages:[{role:'user',content:prompt}],max_tokens:6000,temperature:0.7}),
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (res.status===429) return {ok:false,code:429,msg:'RATE_LIMIT'};
+        if (res.status===404) return {ok:false,code:404,msg:'MODEL_NOT_FOUND'};
+        if (!res.ok) return {ok:false,code:res.status,msg:'HTTP_'+res.status};
+        var json = await res.json();
+        var text = (json&&json.choices&&json.choices[0]&&json.choices[0].message&&json.choices[0].message.content) || '';
+        if (!text.trim()) return {ok:false,code:0,msg:'EMPTY_RESPONSE'};
+        return {ok:true,text:text};
+    } catch(e) {
+        clearTimeout(timer);
+        if (e.name==='AbortError') return {ok:false,code:408,msg:'TIMEOUT'};
+        return {ok:false,code:0,msg:e.message};
+    }
+}
+
+// ── Parse JSON array from AI response ─────────────
 function parseJSON(raw) {
     var text = raw.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
     try { var p = JSON.parse(text); if (Array.isArray(p)) return p; } catch(e) {}
-    var m = text.match(/\[\s\S]+\]/m);
+    var m = text.match(/\[[\s\S]+\]/m);
     if (m) try { var p2 = JSON.parse(m[0]); if (Array.isArray(p2)) return p2; } catch(e) {}
     return null;
 }
 
-// ─── SYLLABUS PROMPT ─────────────────────────────────────────────────────────
+// ── Build syllabus prompt ──────────────────────────
 function buildPrompt(topic, totalDays, startDay, endDay, level, language, type, quiz) {
     var n    = endDay - startDay + 1;
     var role = type==='internship'
         ? 'internship program designer. Create practical daily tasks for a '+totalDays+'-day "'+topic+'" internship.'
         : 'course curriculum designer. Create a '+totalDays+'-day "'+topic+'" course.';
 
+    // ── Difficulty progression ──────────────────────────────────────────
+    // EVERY course is now a single continuous "Zero to Advanced" journey,
+    // no matter which level the user picked. The level dropdown is optional;
+    // the syllabus ALWAYS ramps from absolute-beginner foundations to fully
+    // advanced, real-world mastery.
     var levelRule =
-        'DIFFICULTY JOURNEY (MANDATORY): This is a single "Zero to COMPLETE Advanced" journey of '+totalDays+' days. '
-        + 'ALWAYS ramp difficulty smoothly: first third = FOUNDATIONS (assume zero knowledge); '
-        + 'middle third = INTERMEDIATE (deeper concepts, real use-cases); '
-        + 'final third = COMPLETE ADVANCED (internals, best practices, optimization, real-world projects). '
-        + 'Generating days '+startDay+'-'+endDay+' of '+totalDays+' — match topics to exactly where these days fall. '
-        + 'By the last day the learner must be at expert level.';
+          'DIFFICULTY JOURNEY (MANDATORY for every course): This is a single "Zero to COMPLETE Advanced" journey of '+totalDays+' days. '
+        + 'Ignore any single fixed level — ALWAYS ramp the difficulty smoothly across the full course: '
+        + 'roughly the first third = absolute-beginner FOUNDATIONS (core concepts, vocabulary, simple examples, assume zero prior knowledge); '
+        + 'the middle third = INTERMEDIATE (deeper concepts, real use-cases, combining ideas); '
+        + 'the final third = COMPLETE ADVANCED (complex topics, internals, best practices, performance/optimization, and real-world projects so the learner reaches true mastery). '
+        + 'You are generating days '+startDay+'-'+endDay+' of '+totalDays+', so choose topics that match exactly where these days '
+        + 'fall in that beginner→advanced journey, building on everything taught before. By the last day the learner must be at an expert/advanced level.';
 
+    // ── Quiz rule (STRICT) ──────────────────────────────────────────────
+    // Quiz comes ONLY on every 7th day (7, 14, 21, 28 ...). Those days are
+    // pure REVISION + QUIZ days — NO brand-new concept is taught on them.
+    // All other days teach fresh content with has_quiz:false.
     var quizRule = quiz
-        ? 'QUIZ RULE (STRICT): Quiz ONLY on days that are multiples of 7 (7,14,21...). '
-          + 'Set has_quiz:true and title "Week N — Revision & Quiz" for those days only. NO new concepts on quiz days. '
-          + 'All other days: has_quiz:false and fresh topics.'
-        : 'Set has_quiz:false for every day.';
+        ? 'QUIZ RULE (follow EXACTLY): A day is a quiz day ONLY if its day number is a multiple of 7 (7,14,21,28,...). '
+          + 'For those quiz days set "has_quiz":true, give the title as "Week N — Revision & Quiz", '
+          + 'and DO NOT introduce any new concept on them (they only revise the previous 6 days). '
+          + 'For EVERY other day set "has_quiz":false and teach fresh topics. Never put a quiz on a non-multiple-of-7 day.'
+        : 'Set "has_quiz":false for every single day.';
 
     return 'You are a senior, industry-expert '+role+'\n'
         + levelRule + '\n'
-        + 'Language: titles and topics in '+language+' (technical keywords stay in English).\n'
+        + 'Language: write all titles and topics in '+language+' (technical keywords stay in English).\n'
         + 'Generate ONLY days '+startDay+' to '+endDay+' (exactly '+n+' days).\n'
-        + 'Each content day: clear specific title + 2-3 concrete, industry-relevant sub-topics that build on earlier days. No vague/repeated topics.\n'
+        + 'Design a professional, well-structured curriculum like a premium paid course: each fresh day must have a clear, '
+        + 'specific title and 2-3 focused, concrete, industry-relevant sub-topics (NOT vague one-word topics) that logically '
+        + 'build on earlier days. Avoid repeating the same generic topics across days — each day must move the learner forward.\n'
         + quizRule + '\n'
-        + 'Return ONLY valid JSON array, no markdown:\n'
+        + 'Return ONLY a valid JSON array, no markdown:\n'
         + '[{"day":'+startDay+',"title":"...","topics":["t1","t2","t3"],"image_query":"...","has_quiz":false}]';
 }
 
-// ─── CALL WITH CHAIN FALLBACK ────────────────────────────────────────────────
-async function callWithChain(chain, prompt, batchNum) {
-    var rateLimitUntil = {};
-    var deadKeys       = {};  // provider -> [key, ...]
-    var MAX_CALLS = 20;
-    var callCount = 0;
+// ── Master call with full key+model fallback ───────
+async function callWithFallback(provider, apiKeys, models, prompt, batchNum) {
+    var keyIdx = 0, modelIdx = 0, attempts = 0;
+    var max = apiKeys.length * models.length * 3;
 
-    while (callCount < MAX_CALLS) {
-        // pick first available provider
-        var sel = null;
-        for (var i = 0; i < chain.length; i++) {
-            var c = chain[i];
-            var lk = c.keys.filter(function(k){
-                return !(deadKeys[c.provider] || []).includes(k);
-            });
-            if (!lk.length) continue;
-            if (Date.now() < (rateLimitUntil[c.provider] || 0)) continue;
-            sel = { entry: c, liveKeys: lk };
-            break;
-        }
+    while (attempts < max) {
+        attempts++;
+        var apiKey = apiKeys[keyIdx % apiKeys.length];
+        var model  = models[modelIdx % models.length];
 
-        if (!sel) {
-            var earliest = Math.min.apply(null, Object.values(rateLimitUntil).filter(function(v){ return v > Date.now(); }));
-            if (!isFinite(earliest)) { log('❌ All providers exhausted', 'log-err'); return {success:false}; }
-            var wait = Math.ceil((earliest - Date.now()) / 1000);
-            log('⏳ Cooldown — wait ' + wait + 's...', 'log-warn');
-            await sleep(earliest - Date.now() + 1000);
-            continue;
-        }
+        log('🔁 Try '+attempts+': Key'+(keyIdx%apiKeys.length+1)+' + '+model, 'log-info');
 
-        var keyIdx = callCount % sel.liveKeys.length;
-        var modIdx = Math.floor(callCount / sel.liveKeys.length) % sel.entry.models.length;
-        var key    = sel.liveKeys[keyIdx];
-        var model  = sel.entry.models[modIdx];
-
-        callCount++;
-        log('🔁 Batch '+batchNum+' Try '+callCount+': ['+sel.entry.provider.toUpperCase()+'] '+model, 'log-info');
-
-        var res = await callAPI(sel.entry.provider, key, model, prompt);
+        var res = provider === 'gemini'
+            ? await callGemini(apiKey, model, prompt)
+            : await callOpenAIFormat(provider, apiKey, model, prompt);
 
         if (res.ok) {
             var parsed = parseJSON(res.text);
             if (parsed && parsed.length > 0) {
-                log('✅ Batch '+batchNum+' done ('+model+')', 'log-ok');
+                log('✅ Batch '+batchNum+' done — '+model, 'log-ok');
                 return {success:true, data:parsed};
             }
-            log('⚠️ JSON parse fail — retry', 'log-warn');
-            await sleep(1000); continue;
+            log('⚠️ Parse fail — next model...', 'log-warn');
+            modelIdx++; await sleep(1000); continue;
         }
 
-        if (res.code === 401) {
-            log('❌ Key '+(keyIdx+1)+' invalid — skip', 'log-err');
-            if (!deadKeys[sel.entry.provider]) deadKeys[sel.entry.provider] = [];
-            deadKeys[sel.entry.provider].push(key);
-            await sleep(300); continue;
-        }
         if (res.code === 429) {
-            rateLimitUntil[sel.entry.provider] = Date.now() + 60000;
-            log('⚠️ '+sel.entry.provider.toUpperCase()+' rate limited — switch provider', 'log-warn');
-            await sleep(500); continue;
+            log('⏳ Rate limit Key'+(keyIdx%apiKeys.length+1)+' — rotate key', 'log-warn');
+            keyIdx++;
+            if (keyIdx % apiKeys.length === 0) { log('⏳ All keys limited — 15s wait...','log-warn'); await sleep(15000); }
+            else { await sleep(2000); }
+        } else if (res.code===503||res.code===500||res.code===408) {
+            log('⚠️ '+model+' '+res.msg+' — next model', 'log-warn');
+            modelIdx++; await sleep(3000);
+        } else if (res.code===404) {
+            log('❌ '+model+' not found — skip', 'log-err');
+            modelIdx++; await sleep(1000);
+        } else {
+            log('❌ Error '+res.code+': '+res.msg, 'log-err');
+            modelIdx++; keyIdx++; await sleep(2000);
         }
-        if (res.code === 404 || res.code === 400) {
-            log('⚠️ '+model+' unusable — skip model', 'log-warn');
-            sel.entry.models = sel.entry.models.filter(function(m){ return m !== model; });
-            await sleep(300); continue;
+
+        if (modelIdx >= models.length && keyIdx >= apiKeys.length) {
+            log('⏳ All combos tried — 20s cooldown...', 'log-warn');
+            modelIdx = 0; keyIdx = 0; await sleep(20000);
         }
-        log('⚠️ '+res.msg+' — retry', 'log-warn');
-        await sleep(2000);
     }
-    return {success:false, error:'Max attempts reached'};
+    return {success:false, error:'Saare models aur keys fail ho gaye.'};
 }
 
-// ─── MAIN ────────────────────────────────────────────────────────────────────
+// ── MAIN ──────────────────────────────────────────
 async function startGenerate() {
     var topic    = document.getElementById('topic').value.trim();
     var days     = parseInt(document.getElementById('days').value);
@@ -412,20 +451,33 @@ async function startGenerate() {
 
     if (!topic) { showErr('Topic enter karo!'); return; }
 
+    // Settings reload karo agar nahi hai
     if (!AI_SETTINGS) {
         try {
-            var r = await fetch('api/ai/get-settings.php');
-            var d = await r.json();
+            var r       = await fetch('api/ai/get-settings.php');
+            var rawText = await r.text();
+            var d       = JSON.parse(rawText);
             if (!d.success || !d.settings) { showErr('Settings load nahi hui — page refresh karo.'); return; }
             AI_SETTINGS = d.settings;
         } catch(e) { showErr('Settings fetch error: '+e.message); return; }
     }
 
-    var chain = buildProviderChain(AI_SETTINGS);
-    if (!chain.length) {
-        showErr('❌ Koi API key set nahi hai! <a href="settings.php" style="color:#fff;text-decoration:underline">Settings mein jao →</a>');
+    var provider = (AI_SETTINGS.active_ai_provider || 'gemini').toLowerCase().trim();
+    console.log('[GEN] Provider:', provider);
+    console.log('[GEN] All settings keys:', Object.keys(AI_SETTINGS));
+
+    // ✅ FIXED — sabhi providers support
+    var apiKeys = buildKeys(provider, AI_SETTINGS);
+    console.log('[GEN] API Keys found:', apiKeys.length, 'for provider:', provider);
+
+    if (!apiKeys.length) {
+        showErr('❌ '+provider.toUpperCase()+' API key set nahi hai! <a href="settings.php" style="color:#fff;text-decoration:underline">Settings mein jao →</a>');
         return;
     }
+
+    var savedModel = AI_SETTINGS[provider+'_model'] || '';
+    var models     = buildModels(provider, savedModel);
+    console.log('[GEN] Models:', models);
 
     var btn = document.getElementById('genBtn');
     btn.disabled = true; btn.textContent = '⏳ Generating...';
@@ -433,12 +485,12 @@ async function startGenerate() {
     document.getElementById('progressBox').style.display = 'block';
     document.getElementById('logBox').innerHTML = '';
 
-    var batchSize   = parseInt(AI_SETTINGS.batch_size || '7');
-    var totalBatch  = Math.ceil(days / batchSize);
+    var batchSize  = parseInt(AI_SETTINGS.batch_size || '7');
+    var totalBatch = Math.ceil(days / batchSize);
     var allSyllabus = [];
 
-    log('🐳 Primary: DEEPSEEK | 🚀 Backup: GROQ | Days: '+days+' | Batches: '+totalBatch, 'log-ok');
-    log('🔑 DeepSeek keys: '+(AI_SETTINGS.deepseek_api_key?'✅':'❌')+' | Groq keys: '+(AI_SETTINGS.groq_api_key?'✅':'❌'), 'log-info');
+    log('🚀 Provider: '+provider.toUpperCase()+' | Days: '+days+' | Batches: '+totalBatch, 'log-ok');
+    log('🔑 Keys: '+apiKeys.length+' | Model: '+models[0], 'log-info');
 
     try {
         for (var b = 0; b < totalBatch; b++) {
@@ -449,10 +501,10 @@ async function startGenerate() {
             if (b > 0) await sleep(1500);
 
             var prompt = buildPrompt(topic, days, startDay, endDay, level, language, selectedType, includeQuiz);
-            var result = await callWithChain(chain, prompt, b+1);
+            var result = await callWithFallback(provider, apiKeys, models, prompt, b+1);
 
             if (!result.success) {
-                showErr('Batch '+(b+1)+' fail — retry karo ya provider check karo.');
+                showErr('Batch '+(b+1)+' fail: '+result.error);
                 resetBtn(); return;
             }
 
@@ -460,31 +512,34 @@ async function startGenerate() {
             updateProgress('✅ Batch '+(b+1)+'/'+totalBatch+' done!', allSyllabus.length, days);
         }
 
-        // ENFORCE: quiz sirf day 7,14,21... pe (AI-proof, deterministic)
+        // ── ENFORCE quiz ONLY on every 7th day (deterministic, AI-proof) ──
+        // Chahe AI kuch bhi return kare, final faisla yahi code karega:
+        // quiz sirf day 7,14,21,28... pe. Baaki har din pure content.
         allSyllabus.forEach(function(d) {
             d.day      = parseInt(d.day, 10);
             d.has_quiz = includeQuiz && (d.day % 7 === 0);
         });
 
-        // History save (external endpoint — unchanged)
+        // History save
         updateProgress('💾 Saving...', days, days);
         var historyId = 0;
         try {
             var hRes  = await fetch('../api/ai/save-history.php', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({topic:topic,total_days:days,level:level,language:language,
-                                      type:selectedType,provider:chain[0].provider,model:chain[0].models[0]})
+                body: JSON.stringify({topic:topic,total_days:days,level:level,language:language,type:selectedType,provider:provider,model:models[0]})
             });
-            var hData = await hRes.json();
+            var hRaw  = await hRes.text();
+            var hData = JSON.parse(hRaw);
             if (hData.success) historyId = hData.history_id;
         } catch(e) { console.warn('History save failed:', e); }
 
+        // sessionStorage mein save karo
         sessionStorage.setItem('ai_syllabus', JSON.stringify(allSyllabus));
         sessionStorage.setItem('ai_meta', JSON.stringify({
             topic:topic, days:days, level:level, language:language,
             type:selectedType, include_quiz:includeQuiz,
-            history_id:historyId, provider:chain[0].provider,
-            model:chain[0].models[0], batch_size:batchSize
+            history_id:historyId, provider:provider,
+            model:models[0], batch_size:batchSize
         }));
 
         updateProgress('🎉 Done! Redirecting...', days, days);

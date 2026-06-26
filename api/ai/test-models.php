@@ -5,9 +5,9 @@
  * Served at {app}/api/ai/test-models.php; settings.php calls it via
  * "api/ai/test-models.php". Tests an API key against each of a provider's
  * models and reports which ones work. Supports ALL providers including the
- * Supports deepseek (primary) and groq (backup).
+ * new free ones (openrouter, cerebras).
  *
- * Request  (POST JSON): { "api_key": "...", "provider": "deepseek|groq" }
+ * Request  (POST JSON): { "api_key": "...", "provider": "gemini|groq|openrouter|cerebras|openai|grok" }
  * Response (JSON):      { "success": true, "results": [ {model, working, status, message, latency_ms} ], "best_model": "..." }
  */
 session_name('ai_studio_session');
@@ -31,22 +31,37 @@ if ($apiKey === '' || $provider === '') {
 
 // Models to test per provider (kept in sync with building.php PROVIDER_MODELS)
 $MODELS = [
-    'deepseek' => ['deepseek-v4-flash', 'deepseek-chat', 'deepseek-v4-pro'],
-    'groq'     => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it'],
+    'gemini'     => ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite'],
+    'groq'       => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it', 'qwen/qwen3-32b', 'openai/gpt-oss-20b'],
+    'deepseek'   => ['deepseek-v4-flash', 'deepseek-chat', 'deepseek-v4-pro', 'deepseek-reasoner'],
+    'openrouter' => ['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen-2.5-72b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'mistralai/mistral-small-3.1-24b-instruct:free'],
+    'cerebras'   => ['llama-3.3-70b', 'qwen-3-32b', 'llama3.1-8b'],
+    'openai'     => ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
+    'grok'       => ['grok-3-fast', 'grok-3', 'grok-2'],
 ];
 
 $ENDPOINTS = [
-    'deepseek' => 'https://api.deepseek.com/v1/chat/completions',
-    'groq'     => 'https://api.groq.com/openai/v1/chat/completions',
+    'groq'       => 'https://api.groq.com/openai/v1/chat/completions',
+    'deepseek'   => 'https://api.deepseek.com/v1/chat/completions',
+    'openrouter' => 'https://openrouter.ai/api/v1/chat/completions',
+    'cerebras'   => 'https://api.cerebras.ai/v1/chat/completions',
+    'openai'     => 'https://api.openai.com/v1/chat/completions',
+    'grok'       => 'https://api.x.ai/v1/chat/completions',
 ];
 
-if (!in_array($provider, ['deepseek','groq'])) {
+if (!isset($MODELS[$provider])) {
     echo json_encode(['success' => false, 'message' => 'Unknown provider: ' . $provider, 'results' => []]);
     exit;
 }
 
+/** Test a single Gemini model. Returns [working, status, message]. */
+function testGemini($model, $apiKey) {
+    $url  = 'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent?key=' . urlencode($apiKey);
+    $body = json_encode(['contents' => [['parts' => [['text' => 'Hi']]]], 'generationConfig' => ['maxOutputTokens' => 5]]);
+    return httpPost($url, $body, ['Content-Type: application/json']);
+}
 
-/** Test a single OpenAI-compatible model (deepseek/groq). */
+/** Test a single OpenAI-compatible model (groq/openrouter/cerebras/openai/grok). */
 function testOpenAIStyle($endpoint, $model, $apiKey) {
     $body = json_encode([
         'model'      => $model,
@@ -104,7 +119,11 @@ $bestMs    = PHP_INT_MAX;
 
 foreach ($MODELS[$provider] as $model) {
     $start = microtime(true);
-    [$working, $status, $message] = testOpenAIStyle($ENDPOINTS[$provider], $model, $apiKey);
+    if ($provider === 'gemini') {
+        [$working, $status, $message] = testGemini($model, $apiKey);
+    } else {
+        [$working, $status, $message] = testOpenAIStyle($ENDPOINTS[$provider], $model, $apiKey);
+    }
     $latency = (int) round((microtime(true) - $start) * 1000);
 
     // A 429 means the key is valid but the model is busy — still "usable"

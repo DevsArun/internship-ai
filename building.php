@@ -62,8 +62,13 @@ var AI_SETTINGS = null;
 // ─── PROVIDER CONFIG ──────────────────────────────────────────────────────────
 // Default model lists per provider (fallback if no saved model)
 var PROVIDER_MODELS = {
-  deepseek: ['deepseek-v4-flash','deepseek-chat','deepseek-v4-pro'],
-  groq:     ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it']
+  gemini:     ['gemini-2.5-flash','gemini-2.0-flash','gemini-2.5-pro','gemini-2.0-flash-lite'],
+  groq:       ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','qwen/qwen3-32b','openai/gpt-oss-20b'],
+  deepseek:   ['deepseek-v4-flash','deepseek-chat','deepseek-v4-pro','deepseek-reasoner'],
+  openrouter: ['deepseek/deepseek-chat-v3-0324:free','meta-llama/llama-3.3-70b-instruct:free','qwen/qwen-2.5-72b-instruct:free','google/gemini-2.0-flash-exp:free','mistralai/mistral-small-3.1-24b-instruct:free'],
+  cerebras:   ['llama-3.3-70b','qwen-3-32b','llama3.1-8b'],
+  openai:     ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'],
+  grok:       ['grok-3-fast','grok-3','grok-2']
 };
 
 // Max output tokens — 8000 gives room for a deep, premium 1500-2500 word lesson.
@@ -98,8 +103,7 @@ function buildProviderChain(settings){
 
   // All providers in order: primary first, then the rest as fallback
   var order = [primary];
-  // Chain: DeepSeek PRIMARY, Groq BACKUP — always in this order
-  ['deepseek','groq'].forEach(function(p){
+  ['gemini','groq','deepseek','openrouter','cerebras','openai','grok'].forEach(function(p){
     if(p !== primary) order.push(p);
   });
 
@@ -128,6 +132,29 @@ function buildProviderChain(settings){
 }
 
 // ─── API CALLERS ──────────────────────────────────────────────────────────────
+function callGemini(apiKey, model, prompt){
+  var ctrl  = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 50000);
+  return fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.6, maxOutputTokens:MAX_OUTPUT_TOKENS} }),
+      signal: ctrl.signal }
+  ).then(function(res){
+    clearTimeout(timer);
+    if(res.status === 429) return {ok:false, code:429, msg:'RATE_LIMIT'};
+    if(res.status === 503) return {ok:false, code:503, msg:'OVERLOADED'};
+    if(!res.ok)            return {ok:false, code:res.status, msg:'HTTP_'+res.status};
+    return res.json().then(function(j){
+      var text = '';
+      try { text = j.candidates[0].content.parts[0].text; } catch(e){}
+      return text.trim() ? {ok:true, text:text} : {ok:false, code:0, msg:'EMPTY'};
+    });
+  }).catch(function(e){
+    clearTimeout(timer);
+    return {ok:false, code:408, msg: e.name==='AbortError'?'TIMEOUT':e.message};
+  });
+}
 
 function callOpenAIStyle(endpoint, apiKey, model, prompt){
   var ctrl  = new AbortController();
@@ -156,8 +183,13 @@ function callOpenAIStyle(endpoint, apiKey, model, prompt){
 }
 
 function callAPI(provider, apiKey, model, prompt){
-  if(provider === 'deepseek') return callOpenAIStyle('https://api.deepseek.com/v1/chat/completions', apiKey, model, prompt);
-  if(provider === 'groq')     return callOpenAIStyle('https://api.groq.com/openai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'gemini')     return callGemini(apiKey, model, prompt);
+  if(provider === 'groq')       return callOpenAIStyle('https://api.groq.com/openai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'deepseek')   return callOpenAIStyle('https://api.deepseek.com/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'openrouter') return callOpenAIStyle('https://openrouter.ai/api/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'cerebras')   return callOpenAIStyle('https://api.cerebras.ai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'openai')     return callOpenAIStyle('https://api.openai.com/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'grok')       return callOpenAIStyle('https://api.x.ai/v1/chat/completions', apiKey, model, prompt);
   return Promise.resolve({ok:false, code:0, msg:'UNKNOWN_PROVIDER'});
 }
 
