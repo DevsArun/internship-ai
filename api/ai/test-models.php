@@ -33,6 +33,7 @@ if ($apiKey === '' || $provider === '') {
 $MODELS = [
     'gemini'     => ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-2.0-flash-lite'],
     'groq'       => ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it', 'qwen/qwen3-32b', 'openai/gpt-oss-20b'],
+    'deepseek'   => ['deepseek-chat', 'deepseek-reasoner'],
     'openrouter' => ['deepseek/deepseek-chat-v3-0324:free', 'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen-2.5-72b-instruct:free', 'google/gemini-2.0-flash-exp:free', 'mistralai/mistral-small-3.1-24b-instruct:free'],
     'cerebras'   => ['llama-3.3-70b', 'qwen-3-32b', 'llama3.1-8b'],
     'openai'     => ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
@@ -41,6 +42,7 @@ $MODELS = [
 
 $ENDPOINTS = [
     'groq'       => 'https://api.groq.com/openai/v1/chat/completions',
+    'deepseek'   => 'https://api.deepseek.com/v1/chat/completions',
     'openrouter' => 'https://openrouter.ai/api/v1/chat/completions',
     'cerebras'   => 'https://api.cerebras.ai/v1/chat/completions',
     'openai'     => 'https://api.openai.com/v1/chat/completions',

@@ -74,7 +74,7 @@ if ($action === 'save') {
 
     // Whitelist of settings we accept. Each provider has 3 key slots + 1 model.
     $allowed = ['active_ai_provider'];
-    foreach (['gemini', 'groq', 'openrouter', 'cerebras', 'openai', 'grok'] as $p) {
+    foreach (['gemini', 'groq', 'deepseek', 'openrouter', 'cerebras', 'openai', 'grok'] as $p) {
         $allowed[] = $p . '_api_key';
         $allowed[] = $p . '_api_key_2';
         $allowed[] = $p . '_api_key_3';

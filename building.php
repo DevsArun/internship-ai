@@ -64,6 +64,7 @@ var AI_SETTINGS = null;
 var PROVIDER_MODELS = {
   gemini:     ['gemini-2.5-flash','gemini-2.0-flash','gemini-2.5-pro','gemini-2.0-flash-lite'],
   groq:       ['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','qwen/qwen3-32b','openai/gpt-oss-20b'],
+  deepseek:   ['deepseek-chat','deepseek-reasoner'],
   openrouter: ['deepseek/deepseek-chat-v3-0324:free','meta-llama/llama-3.3-70b-instruct:free','qwen/qwen-2.5-72b-instruct:free','google/gemini-2.0-flash-exp:free','mistralai/mistral-small-3.1-24b-instruct:free'],
   cerebras:   ['llama-3.3-70b','qwen-3-32b','llama3.1-8b'],
   openai:     ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'],
@@ -102,7 +103,7 @@ function buildProviderChain(settings){
 
   // All providers in order: primary first, then the rest as fallback
   var order = [primary];
-  ['gemini','groq','openrouter','cerebras','openai','grok'].forEach(function(p){
+  ['gemini','groq','deepseek','openrouter','cerebras','openai','grok'].forEach(function(p){
     if(p !== primary) order.push(p);
   });
 
@@ -184,6 +185,7 @@ function callOpenAIStyle(endpoint, apiKey, model, prompt){
 function callAPI(provider, apiKey, model, prompt){
   if(provider === 'gemini')     return callGemini(apiKey, model, prompt);
   if(provider === 'groq')       return callOpenAIStyle('https://api.groq.com/openai/v1/chat/completions', apiKey, model, prompt);
+  if(provider === 'deepseek')   return callOpenAIStyle('https://api.deepseek.com/v1/chat/completions', apiKey, model, prompt);
   if(provider === 'openrouter') return callOpenAIStyle('https://openrouter.ai/api/v1/chat/completions', apiKey, model, prompt);
   if(provider === 'cerebras')   return callOpenAIStyle('https://api.cerebras.ai/v1/chat/completions', apiKey, model, prompt);
   if(provider === 'openai')     return callOpenAIStyle('https://api.openai.com/v1/chat/completions', apiKey, model, prompt);

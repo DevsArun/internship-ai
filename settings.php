@@ -128,6 +128,12 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
           <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">Llama 3.3 70B (ultra-fast)...</div>
           <span class="badge-free">FREE</span>
         </div>
+        <div class="provider-btn" id="btnDeepseek" onclick="selectAI('deepseek')">
+          <div style="font-size:26px;margin-bottom:4px">🐳</div>
+          <div style="font-weight:700;font-size:14px">DeepSeek</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px">V3 / R1 — top quality...</div>
+          <span class="badge-opt" style="margin-left:0">FREE TRIAL + SASTA</span>
+        </div>
       </div>
 
       <!-- GEMINI -->
@@ -353,6 +359,43 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
           </div>
         </div>
       </div>
+
+      <!-- DEEPSEEK -->
+      <div id="deepseekSection" style="display:none">
+        <div class="guide">
+          <div class="g-title">🐳 DeepSeek API key kaise laaye? <span style="color:#fbbf24;font-size:11px">(FREE trial credit, phir bahut sasta)</span></div>
+          <ol>
+            <li>Khol <a href="https://platform.deepseek.com/api_keys" target="_blank">platform.deepseek.com/api_keys</a></li>
+            <li><strong>Sign up / login</strong> karo (email/Google)</li>
+            <li><strong>"Create new API key"</strong> dabao → key copy karo (sk-... se shuru hogi)</li>
+            <li>Yahan <strong>API Key 1</strong> me paste karo → Test → Save</li>
+          </ol>
+          <p class="g-note">💡 Content quality me ye sabse best hai (DeepSeek V3). Naye account ko thoda free token credit milta hai; khatam hone par pay-as-you-go (deepseek-chat ~$0.28/$0.42 per 1M tokens — bahut sasta). Card khatam na ho to bhi OpenRouter ka FREE DeepSeek fallback chal jaayega.</p>
+        </div>
+        <div class="key-group">
+          <div class="key-item">
+            <label style="color:#fff;font-weight:600">🔑 API Key 1 <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:400;margin-left:8px">Key lao →</a></label>
+            <div style="position:relative"><input type="password" id="deepseekKey" class="input-f" placeholder="sk-..."><button type="button" onclick="tv('deepseekKey')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+          <div class="key-item">
+            <label>🔑 API Key 2 <span class="badge-opt">OPTIONAL</span></label>
+            <div style="position:relative"><input type="password" id="deepseekKey2" class="input-f" placeholder="sk-..."><button type="button" onclick="tv('deepseekKey2')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+          <div class="key-item">
+            <label>🔑 API Key 3 <span class="badge-opt">OPTIONAL</span></label>
+            <div style="position:relative"><input type="password" id="deepseekKey3" class="input-f" placeholder="sk-..."><button type="button" onclick="tv('deepseekKey3')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer">👁</button></div>
+          </div>
+        </div>
+        <button class="btn-test" id="testDeepseekBtn" onclick="testModels('deepseek')">🔍 Test Keys & Auto-Select Best Model</button>
+        <div id="deepseekTestResults" style="display:none;margin-top:14px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px">
+          <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:12px">MODEL TEST RESULTS — DEEPSEEK</p>
+          <div id="deepseekModelList"></div>
+          <div id="deepseekBestBox" style="display:none;margin-top:14px;padding:14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px">
+            <p style="color:#4ade80;font-size:12px;font-weight:700;margin-bottom:10px">✅ Working Models — Select karo:</p>
+            <select id="deepseekSelectedModel" class="input-f" style="font-family:monospace;font-weight:700"></select>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- CONTENT SETTINGS -->
@@ -394,7 +437,7 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
 
 <script>
 var activeAI = 'gemini';
-var PROVIDERS = ['gemini','groq','openrouter','cerebras','openai','grok'];
+var PROVIDERS = ['gemini','groq','deepseek','openrouter','cerebras','openai','grok'];
 
 // ── Load Settings ────────────────────────────────
 async function loadSettings() {
