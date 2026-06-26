@@ -560,11 +560,20 @@ async function testModels(provider) {
 
         var data;
         try { data = JSON.parse(rawText); }
-        catch(e) { toast('❌ Test response parse error!', true); console.error(rawText); btn.disabled=false; btn.textContent='🔍 Test Keys & Auto-Select Best Model'; return; }
+        catch(e) {
+            toast('❌ Backend nahi mila — "api/ai/test-models.php" deploy karo apne server pe!', true);
+            console.error('Not JSON:', rawText);
+            btn.disabled=false; btn.textContent='🔍 Test Keys & Auto-Select Best Model'; return;
+        }
+
+        if (!data.results) {
+            toast('❌ ' + (data.message || 'Test failed — server error'), true);
+            btn.disabled=false; btn.textContent='🔍 Test Keys & Auto-Select Best Model'; return;
+        }
 
         list.innerHTML = data.results.map(function(r) {
-            var color = r.working ? '#4ade80' : r.status===429 ? '#fbbf24' : 'rgba(255,255,255,0.3)';
-            var bg    = r.working ? 'rgba(34,197,94,0.05)' : r.status===429 ? 'rgba(251,191,36,0.05)' : 'transparent';
+            var color = r.working ? '#4ade80' : r.status===429 ? '#fbbf24' : r.status===402 ? '#fbbf24' : 'rgba(255,255,255,0.3)';
+            var bg    = r.working ? 'rgba(34,197,94,0.05)' : (r.status===429||r.status===402) ? 'rgba(251,191,36,0.05)' : 'transparent';
             return '<div class="model-row" style="background:'+bg+'"><span style="color:#fff;font-size:13px;font-family:monospace">'+r.model+'</span><span style="color:'+color+';font-size:12px;font-weight:600">'+r.message+'</span></div>';
         }).join('');
 
@@ -575,8 +584,20 @@ async function testModels(provider) {
                 return '<option value="'+r.model+'"'+(r.model===data.best_model?' selected':'')+'>'+r.model+(r.model===data.best_model?' ⭐ (Best)':'')+' ('+r.latency_ms+'ms)</option>';
             }).join('');
             toast('✅ '+working.length+' working model(s) mile! Ek select karo phir Save karo.');
+        } else if (data.hint === 'no_balance') {
+            // The KEY is valid — the account just has no credit/balance
+            bestBox.style.display = 'block';
+            selEl.innerHTML = data.results.map(function(r) {
+                return '<option value="'+r.model+'">'+r.model+'</option>';
+            }).join('');
+            toast('✅ API Key SAHI hai! Lekin account me balance/credit nahi hai. platform.deepseek.com → Top up me thode funds daalo (₹100 = bahut courses). Phir model select karke Save karo.', true);
+        } else if (data.hint === 'bad_key') {
+            toast('❌ API Key galat hai — dobara check karke sahi key daalo.', true);
+        } else if (data.hint === 'connection') {
+            toast('❌ Server connect nahi ho paya — thodi der baad try karo.', true);
         } else {
-            toast('⚠️ Koi working model nahi mila. API key check karo.', true);
+            var firstMsg = (data.results[0] && data.results[0].message) ? data.results[0].message : 'unknown';
+            toast('⚠️ Koi working model nahi mila. Reason: ' + firstMsg, true);
         }
     } catch(e) {
         toast('❌ Test error: '+e.message, true);

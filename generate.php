@@ -199,6 +199,9 @@ const GROQ_FALLBACKS = [
 
 const OPENAI_FALLBACKS = ['gpt-4o-mini','gpt-4o','gpt-3.5-turbo'];
 const GROK_FALLBACKS   = ['grok-3-fast','grok-3','grok-2-1212'];
+const DEEPSEEK_FALLBACKS   = ['deepseek-chat','deepseek-reasoner'];
+const OPENROUTER_FALLBACKS = ['deepseek/deepseek-chat-v3-0324:free','meta-llama/llama-3.3-70b-instruct:free','qwen/qwen-2.5-72b-instruct:free'];
+const CEREBRAS_FALLBACKS   = ['llama-3.3-70b','qwen-3-32b','llama3.1-8b'];
 
 // ── Load settings on page load ─────────────────────
 async function loadSettings() {
@@ -256,10 +259,13 @@ function resetBtn() {
 // ── Build model list (saved first, then fallbacks) ──
 function buildModels(provider, savedModel) {
     var fallbacks = {
-        gemini: GEMINI_FALLBACKS,
-        groq:   GROQ_FALLBACKS,
-        openai: OPENAI_FALLBACKS,
-        grok:   GROK_FALLBACKS
+        gemini:     GEMINI_FALLBACKS,
+        groq:       GROQ_FALLBACKS,
+        deepseek:   DEEPSEEK_FALLBACKS,
+        openrouter: OPENROUTER_FALLBACKS,
+        cerebras:   CEREBRAS_FALLBACKS,
+        openai:     OPENAI_FALLBACKS,
+        grok:       GROK_FALLBACKS
     }[provider] || GEMINI_FALLBACKS;
 
     var list = [];
@@ -271,10 +277,13 @@ function buildModels(provider, savedModel) {
 // ── Build API keys list ────────────────────────────
 function buildKeys(provider, s) {
     var keyMap = {
-        gemini: [s.gemini_api_key||'', s.gemini_api_key_2||'', s.gemini_api_key_3||''],
-        groq:   [s.groq_api_key||'',   s.groq_api_key_2||'',   s.groq_api_key_3||''],
-        openai: [s.openai_api_key||'',  s.openai_api_key_2||'', s.openai_api_key_3||''],
-        grok:   [s.grok_api_key||'',   s.grok_api_key_2||'',   s.grok_api_key_3||'']
+        gemini:     [s.gemini_api_key||'', s.gemini_api_key_2||'', s.gemini_api_key_3||''],
+        groq:       [s.groq_api_key||'',   s.groq_api_key_2||'',   s.groq_api_key_3||''],
+        deepseek:   [s.deepseek_api_key||'', s.deepseek_api_key_2||'', s.deepseek_api_key_3||''],
+        openrouter: [s.openrouter_api_key||'', s.openrouter_api_key_2||'', s.openrouter_api_key_3||''],
+        cerebras:   [s.cerebras_api_key||'', s.cerebras_api_key_2||'', s.cerebras_api_key_3||''],
+        openai:     [s.openai_api_key||'', s.openai_api_key_2||'', s.openai_api_key_3||''],
+        grok:       [s.grok_api_key||'',   s.grok_api_key_2||'',   s.grok_api_key_3||'']
     };
     return (keyMap[provider] || []).filter(function(k) { return k.trim(); });
 }
@@ -308,9 +317,12 @@ async function callGemini(apiKey, model, prompt) {
 // ── Groq / OpenAI / Grok API call ─────────────────
 async function callOpenAIFormat(provider, apiKey, model, prompt) {
     var urls = {
-        groq:   'https://api.groq.com/openai/v1/chat/completions',
-        openai: 'https://api.openai.com/v1/chat/completions',
-        grok:   'https://api.x.ai/v1/chat/completions'
+        groq:       'https://api.groq.com/openai/v1/chat/completions',
+        deepseek:   'https://api.deepseek.com/v1/chat/completions',
+        openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+        cerebras:   'https://api.cerebras.ai/v1/chat/completions',
+        openai:     'https://api.openai.com/v1/chat/completions',
+        grok:       'https://api.x.ai/v1/chat/completions'
     };
     var url = urls[provider];
     if (!url) return {ok:false,code:0,msg:'Unknown provider: '+provider};
