@@ -87,6 +87,33 @@ label { color: rgba(255,255,255,0.55); font-size: 13px; display: block; margin-b
       <p style="color:rgba(255,255,255,0.4);font-size:14px">AI provider aur system configure karo</p>
     </div>
 
+    <!-- PROVIDER RECOMMENDATION -->
+    <div class="card" style="border-color:rgba(251,191,36,0.3);background:rgba(251,191,36,0.04)">
+      <div class="section-title" style="color:#fbbf24">⚡ Recommended Setup (Sabse Best)</div>
+      <div class="section-sub">Kisi bhi length ka course (7 din se 365 din tak) seamlessly generate karne ke liye</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:14px">
+          <p style="color:#4ade80;font-weight:700;font-size:13px;margin-bottom:6px">🥇 Best Quality Setup</p>
+          <p style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.7">
+            <strong>Primary:</strong> 🐳 DeepSeek (deepseek-chat)<br>
+            <strong>Fallback:</strong> ✨ Gemini 2.0 Flash<br>
+            <strong>Why:</strong> DeepSeek V3 = best content quality. Free trial phir ~₹15-25 per 90-day course. Gemini backup me high limit (1500 req/day).
+          </p>
+        </div>
+        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:12px;padding:14px">
+          <p style="color:#93c5fd;font-weight:700;font-size:13px;margin-bottom:6px">🆓 100% Free Setup</p>
+          <p style="color:rgba(255,255,255,0.7);font-size:12px;line-height:1.7">
+            <strong>Primary:</strong> ✨ Gemini 2.0 Flash<br>
+            <strong>Fallback:</strong> 🚀 Groq (Llama 3.3 70B)<br>
+            <strong>Why:</strong> Gemini = 1500 req/day free, koi bhi course ek din me complete. No card needed.
+          </p>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px">
+        <p style="color:rgba(255,255,255,0.5);font-size:11.5px">⚠️ <strong style="color:rgba(255,255,255,0.7)">OpenRouter free DeepSeek avoid karo as primary</strong> — sirf 50 req/day limit hai, 90-day course me 2 din lagenge. Use as last fallback only.</p>
+      </div>
+    </div>
+
     <!-- PROVIDER SELECTION -->
     <div class="card">
       <div class="section-title">🤖 AI Provider</div>

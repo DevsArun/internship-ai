@@ -421,6 +421,7 @@ async function generateOneDay(chain, dayObj, meta, weekTopics){
       // Rate limited — set cooldown for THIS provider and SWITCH to next
       var cooldownMs = 60000; // 60 second default cooldown
       rateLimitUntil[selectedProvider.provider] = Date.now() + cooldownMs;
+      selectedProvider._hadRateLimit = true;
       log('  ⚠️ ' + selectedProvider.provider.toUpperCase() + ' rate limited — 60s cooldown, switching provider...', 'warn');
 
       // Try to find another provider immediately
@@ -546,13 +547,22 @@ async function generateAll(chain, meta){
       document.getElementById('sETA').textContent = rem > 60 ? Math.ceil(rem/60) + 'm' : Math.ceil(rem) + 's';
     }
 
-    // Batch boundary pause (every BS days) — but only between batches, not after last day
+    // Batch boundary pause — only if we actually hit a rate-limit during this
+    // batch (tracked via rateLimitHit flag on the chain). If all calls went
+    // through cleanly there is no reason to burn 30 seconds waiting.
+    var hadRateLimit = chain.some(function(c){ return c._hadRateLimit; });
+    chain.forEach(function(c){ c._hadRateLimit = false; }); // reset for next batch
+
     if((i + 1) % BS === 0 && i < syllabus.length - 1){
-      log('⏸️ Batch complete — 30s wait...', 'wait');
-      await sleep(30000);
-      log('▶️ Next batch shuru...', 'spin');
+      if(hadRateLimit){
+        log('⏸️ Rate limit detected — 15s cooldown before next batch...', 'wait');
+        await sleep(15000);
+      } else {
+        log('⏸️ Batch done — next batch starting...', 'spin');
+        await sleep(1500); // tiny pause just to be polite
+      }
     } else {
-      await sleep(600); // small delay between days
+      await sleep(500); // small delay between days
     }
   }
 
